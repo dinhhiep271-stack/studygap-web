@@ -193,6 +193,8 @@ export type Dictionary = {
     metaTitle: string;
     title: string;
     intro: string;
+    google: string;
+    googleRedirecting: string;
     usernameLabel: string;
     passwordLabel: string;
     submit: string;
@@ -458,6 +460,8 @@ const de: Dictionary = {
     title: "Willkommen zurück",
     intro:
       "Dieser Bereich ist privat. Melde dich mit deinem Benutzernamen und Passwort an, um Studygap zu öffnen.",
+    google: "Mit Google anmelden",
+    googleRedirecting: "Weiterleitung zu Google …",
     usernameLabel: "Benutzername",
     passwordLabel: "Passwort",
     submit: "Anmelden",
@@ -723,6 +727,8 @@ const vi: Dictionary = {
     title: "Chào mừng trở lại",
     intro:
       "Khu vực này là riêng tư. Hãy đăng nhập bằng tên đăng nhập và mật khẩu của bạn để mở Studygap.",
+    google: "Đăng nhập bằng Google",
+    googleRedirecting: "Đang chuyển đến Google...",
     usernameLabel: "Tên đăng nhập",
     passwordLabel: "Mật khẩu",
     submit: "Đăng nhập",

@@ -16,6 +16,8 @@ export type SubjectDocument = {
 };
 
 export type NewSubjectDocument = {
+  /** Chủ sở hữu (lấy từ `getCurrentUserId()`). */
+  userId: string;
   subjectId: string;
   fileName: string;
   title: string;
@@ -68,18 +70,20 @@ function compareDocumentsByFileName(
 }
 
 /**
- * Loads the documents stored for a subject, ordered by file name (Kapitel 2
- * before Kapitel 10) so the chapters follow the numbering the learner used when
- * uploading. Pass `language` to let the database filter the locale the chapter
- * is displayed in. A missing table is treated as "no documents yet".
+ * Loads the documents stored for a subject **of one user**, ordered by file name
+ * (Kapitel 2 before Kapitel 10) so the chapters follow the numbering the learner
+ * used when uploading. Pass `language` to let the database filter the locale the
+ * chapter is displayed in. A missing table is treated as "no documents yet".
  */
 export async function getSubjectDocuments(
+  userId: string,
   subjectId: string,
   options: { language?: string } = {},
 ): Promise<SubjectDocument[]> {
   try {
     const documents = await prisma.document.findMany({
       where: {
+        userId,
         subjectId,
         ...(options.language ? { language: options.language } : {}),
       },
@@ -117,14 +121,15 @@ export async function getSubjectDocuments(
   }
 }
 
-/** Number of stored documents that were generated in another language. */
+/** Number of stored documents of one user that were generated in another language. */
 export async function countOtherLanguageDocuments(
+  userId: string,
   subjectId: string,
   language: string,
 ): Promise<number> {
   try {
     return await prisma.document.count({
-      where: { subjectId, NOT: { language } },
+      where: { userId, subjectId, NOT: { language } },
     });
   } catch (error) {
     console.error(
@@ -138,9 +143,11 @@ export async function countOtherLanguageDocuments(
 /**
  * Stores one AI result. `Document.subjectId` references `Subject.id`, so the
  * subject row is upserted first: the subject list itself lives in
- * `lib/subjects.ts` and is not seeded into the database.
+ * `lib/subjects.ts` and is not seeded into the database. The row is keyed by
+ * `(userId, subjectId)` – two users can own the same static subject slug.
  */
 export async function saveSubjectDocument({
+  userId,
   subjectId,
   fileName,
   title,
@@ -151,9 +158,10 @@ export async function saveSubjectDocument({
   subject,
 }: NewSubjectDocument): Promise<{ id: string }> {
   await prisma.subject.upsert({
-    where: { id: subjectId },
+    where: { userId_id: { userId, id: subjectId } },
     create: {
       id: subjectId,
+      userId,
       name: subject.name,
       nameDe: subject.nameDe,
       description: subject.description,
@@ -167,6 +175,7 @@ export async function saveSubjectDocument({
 
   return prisma.document.create({
     data: {
+      userId,
       subjectId,
       fileName,
       title,

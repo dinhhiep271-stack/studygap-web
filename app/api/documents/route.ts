@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readableFileName } from "@/lib/chapters";
+import { getCurrentUserId } from "@/lib/current-user";
 import { parseCurriculum, type ParsedCurriculum } from "@/lib/curriculum";
 import { defaultLocale, hasLocale } from "@/lib/locales";
 import { saveSubjectDocument } from "@/lib/subject-documents";
@@ -82,7 +83,9 @@ export async function POST(request: Request) {
 
   try {
     const curriculum = parseCurriculum(body.curriculum);
+    const userId = await getCurrentUserId();
     const document = await saveSubjectDocument({
+      userId,
       subjectId,
       fileName,
       title: curriculum.title.trim() || readableFileName(fileName),

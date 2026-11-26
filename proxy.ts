@@ -14,6 +14,54 @@ import { getSubject } from "@/lib/subjects";
 
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
 
+/**
+ * Cookie Auth.js ghi sau khi đăng nhập Google: tên không có tiền tố khi chạy
+ * qua HTTP (localhost) và có tiền tố `__Secure-` khi chạy qua HTTPS.
+ */
+const authjsSessionCookies = [
+  "authjs.session-token",
+  "__Secure-authjs.session-token",
+] as const;
+
+/**
+ * Kiểm tra phiên đăng nhập Google do Auth.js (xem `auth.ts`) tạo ra.
+ *
+ * Auth.js dùng session strategy "database", nên cookie chỉ chứa một token
+ * ngẫu nhiên – không thể xác thực bằng chữ ký như cookie `studygap-session`.
+ * Token được tra trong bảng `Session` (unique index `sessionToken`) và phải
+ * còn hạn, nhờ vậy không ai vào được app chỉ bằng cách tự đặt một cookie tên
+ * `authjs.session-token`. Proxy chạy trên Node.js runtime nên dùng Prisma được.
+ *
+ * Không có cookie → trả về `false` mà không chạm database, nên người dùng đăng
+ * nhập bằng form cũ không phải chịu thêm query nào.
+ */
+async function hasAuthjsSession(request: NextRequest): Promise<boolean> {
+  const token = authjsSessionCookies
+    .map((name) => request.cookies.get(name)?.value)
+    .find(Boolean);
+
+  if (!token) {
+    return false;
+  }
+
+  try {
+    // Nạp Prisma theo nhu cầu để proxy vẫn hoạt động khi biến môi trường
+    // DATABASE_URL chưa được cấu hình (chỉ người dùng Google bị ảnh hưởng).
+    const { prisma } = await import("@/lib/prisma");
+    const session = await prisma.session.findUnique({
+      where: { sessionToken: token },
+      select: { expires: true },
+    });
+
+    return session !== null && session.expires.getTime() > Date.now();
+  } catch (error) {
+    // Lỗi database không được biến thành "đã đăng nhập": đóng cửa (fail closed).
+    console.error("Could not verify the Auth.js session.", error);
+
+    return false;
+  }
+}
+
 function getPreferredLocale(request: NextRequest): Locale {
   const stored = request.cookies.get(localeCookie)?.value;
   return stored && hasLocale(stored) ? stored : defaultLocale;
@@ -56,16 +104,23 @@ function postLoginDestination(request: NextRequest, locale: Locale): string {
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const sessionValid = await isSessionValid(
-    request.cookies.get(sessionCookie)?.value,
-  );
 
-  // API routes are protected as well; the auth endpoints themselves stay open.
+  // The Auth.js endpoints must stay open while signed out – they are the ones
+  // that create the session – so they skip the (database backed) check.
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
+  // Người dùng đăng nhập bằng form cũ (cookie ký HMAC) hoặc bằng Google
+  // (cookie phiên của Auth.js) đều được coi là hợp lệ.
+  const [legacySessionValid, authjsSessionValid] = await Promise.all([
+    isSessionValid(request.cookies.get(sessionCookie)?.value),
+    hasAuthjsSession(request),
+  ]);
+  const sessionValid = legacySessionValid || authjsSessionValid;
+
+  // API routes are protected as well.
   if (pathname.startsWith("/api/")) {
-    if (pathname.startsWith("/api/auth/")) {
-      return NextResponse.next();
-    }
-
     return sessionValid
       ? NextResponse.next()
       : NextResponse.json({ error: "unauthorized" }, { status: 401 });

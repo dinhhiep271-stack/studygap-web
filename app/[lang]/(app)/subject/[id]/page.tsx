@@ -7,6 +7,7 @@ import {
   type LearningChapter,
 } from "@/components/subject-learning";
 import { buildChapters } from "@/lib/chapters";
+import { getCurrentUserId } from "@/lib/current-user";
 import { getExam } from "@/lib/exam-service";
 import { getDictionary } from "@/lib/i18n";
 import { hasLocale, otherLocale } from "@/lib/locales";
@@ -106,11 +107,14 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
 
   // Bilingual content: only documents generated in the active language are
   // loaded; material in the other language would otherwise appear untranslated.
+  // Every query is scoped to the signed-in user, so two accounts never share
+  // chapters, language hints or stored exams.
+  const userId = await getCurrentUserId();
   const requestedExamId = firstValue(query.exam);
   const [documents, otherLanguageCount, storedExam] = await Promise.all([
-    getSubjectDocuments(id, { language: lang }),
-    countOtherLanguageDocuments(id, lang),
-    requestedExamId ? getExam(requestedExamId) : Promise.resolve(null),
+    getSubjectDocuments(userId, id, { language: lang }),
+    countOtherLanguageDocuments(userId, id, lang),
+    requestedExamId ? getExam(userId, requestedExamId) : Promise.resolve(null),
   ]);
 
   // Deep link `?exam=<id>`: only a paper of this subject in this language is

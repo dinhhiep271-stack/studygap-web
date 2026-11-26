@@ -337,8 +337,12 @@ function toGeneratedExam(row: ExamRow): GeneratedExam {
   };
 }
 
-/** Persists a generated paper. `subjectId` already exists (documents reference it). */
+/**
+ * Persists a generated paper for one user. The `Subject` row of that user must
+ * already exist (documents reference it).
+ */
 export async function saveExam({
+  userId,
   subjectId,
   documentId,
   kind,
@@ -348,6 +352,8 @@ export async function saveExam({
   chapters,
   questions,
 }: {
+  /** Chủ sở hữu (lấy từ `getCurrentUserId()`). */
+  userId: string;
   subjectId: string;
   documentId: string | null;
   kind: ExamKind;
@@ -359,6 +365,7 @@ export async function saveExam({
 }): Promise<GeneratedExam> {
   const row = await prisma.exam.create({
     data: {
+      userId,
       subjectId,
       documentId,
       kind,
@@ -374,11 +381,18 @@ export async function saveExam({
   return toGeneratedExam(row);
 }
 
-/** Loads a stored paper for `?exam=<id>`; a missing table yields `null`. */
-export async function getExam(id: string): Promise<GeneratedExam | null> {
+/**
+ * Loads a stored paper for `?exam=<id>`. The id alone is not enough: the paper
+ * must belong to the current user, otherwise a deep link could open someone
+ * else's exam. A missing table yields `null`.
+ */
+export async function getExam(
+  userId: string,
+  id: string,
+): Promise<GeneratedExam | null> {
   try {
-    const row = await prisma.exam.findUnique({
-      where: { id },
+    const row = await prisma.exam.findFirst({
+      where: { id, userId },
       select: examSelect,
     });
 

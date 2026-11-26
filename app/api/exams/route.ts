@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readableFileName } from "@/lib/chapters";
+import { getCurrentUserId } from "@/lib/current-user";
 import {
   clampExamDuration,
   clampQuestionCount,
@@ -92,7 +93,9 @@ export async function POST(request: Request) {
       : Number.NaN,
   );
 
-  const documents = await getSubjectDocuments(subjectId, { language });
+  // Only the signed-in user's material may be used to build a paper.
+  const userId = await getCurrentUserId();
+  const documents = await getSubjectDocuments(userId, subjectId, { language });
 
   if (documents.length === 0) {
     return badRequest("no-material");
@@ -144,6 +147,7 @@ export async function POST(request: Request) {
     }
 
     const exam = await saveExam({
+      userId,
       subjectId,
       documentId: kind === "chapter" ? scopeChapters[0].id : null,
       kind,

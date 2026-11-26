@@ -124,10 +124,11 @@ export function SubjectLearning({
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
       <aside
-        className="min-w-0 lg:sticky lg:top-20"
+        className="min-w-0 lg:sticky lg:top-20 lg:flex lg:max-h-[calc(100vh-6rem)] lg:flex-col"
         aria-label={dict.subject.learningPath}
       >
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        {/* Progress card: never scrolls, keeps a fixed height inside the column. */}
+        <div className="shrink-0 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-zinc-900">
               {dict.subject.progressLabel}
@@ -167,14 +168,15 @@ export function SubjectLearning({
         </div>
 
         {/*
-         * The chapter list gets its own scrollbar (`max-h` + `overflow-y-auto`)
-         * so a long list never stretches the sidebar to the height of the
-         * chapter content on the right. `sticky top-24` keeps it in view and
-         * `pr-2` keeps the text clear of the scrollbar.
+         * Only the chapter list scrolls. Because the sticky column is capped at
+         * the viewport height, a long list shrinks (`min-h-0`) and scrolls here
+         * instead of pushing the pinned footer below the fold. The list is not
+         * allowed to grow, so short lists keep the card hugging its content.
+         * Below `lg` the column is not sticky, so the list gets its own cap.
          */}
         <nav
           aria-label={dict.subject.chapterListLabel}
-          className="sticky top-24 mt-4 max-h-[calc(100vh-120px)] overflow-x-hidden overflow-y-auto rounded-2xl border border-zinc-200 bg-white pr-2 shadow-sm"
+          className="mt-4 max-h-[60vh] min-h-0 shrink overflow-x-hidden overflow-y-auto rounded-2xl border border-zinc-200 bg-white pr-2 shadow-sm lg:max-h-none"
         >
           <p className="border-b border-zinc-100 px-4 py-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
             {dict.subject.chapterListLabel}
@@ -241,52 +243,58 @@ export function SubjectLearning({
           </ol>
         </nav>
 
-        <button
-          type="button"
-          data-final-exam
-          data-active={
-            !activeExam && view === "final" ? "true" : undefined
-          }
-          onClick={() => {
-            setActiveExam(null);
-            setView("final");
-          }}
-          aria-current={!activeExam && view === "final" ? "true" : undefined}
-          className={`mt-4 flex w-full items-start gap-3 rounded-2xl border p-4 text-left shadow-sm transition ${
-            !activeExam && view === "final"
-              ? "border-emerald-300 bg-emerald-50/70 ring-1 ring-emerald-300"
-              : "border-zinc-200 bg-white hover:border-emerald-300"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base font-semibold ${
+        {/*
+         * Pinned footer: the final-exam entry and the upload shortcut sit at the
+         * bottom of the column and are always reachable, outside the scroll box.
+         */}
+        <div className="shrink-0">
+          <button
+            type="button"
+            data-final-exam
+            data-active={
+              !activeExam && view === "final" ? "true" : undefined
+            }
+            onClick={() => {
+              setActiveExam(null);
+              setView("final");
+            }}
+            aria-current={!activeExam && view === "final" ? "true" : undefined}
+            className={`mt-4 flex w-full items-start gap-3 rounded-2xl border p-4 text-left shadow-sm transition ${
               !activeExam && view === "final"
-                ? "bg-emerald-600 text-white"
-                : "bg-zinc-100 text-zinc-600"
+                ? "border-emerald-300 bg-emerald-50/70 ring-1 ring-emerald-300"
+                : "border-zinc-200 bg-white hover:border-emerald-300"
             }`}
           >
-            🎓
-          </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold text-zinc-900">
-              {dict.exam.finalNavLabel}
+            <span
+              aria-hidden="true"
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base font-semibold ${
+                !activeExam && view === "final"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-zinc-100 text-zinc-600"
+              }`}
+            >
+              🎓
             </span>
-            <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
-              {dict.exam.finalNavHint}
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-zinc-900">
+                {dict.exam.finalNavLabel}
+              </span>
+              <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
+                {dict.exam.finalNavHint}
+              </span>
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                {chapters.length} {dict.subject.chapterUnit}
+              </span>
             </span>
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-              {chapters.length} {dict.subject.chapterUnit}
-            </span>
-          </span>
-        </button>
+          </button>
 
-        <Link
-          href={uploadHref}
-          className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
-        >
-          {dict.subject.uploadMore}
-        </Link>
+          <Link
+            href={uploadHref}
+            className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
+          >
+            {dict.subject.uploadMore}
+          </Link>
+        </div>
       </aside>
 
       <div className="min-w-0">

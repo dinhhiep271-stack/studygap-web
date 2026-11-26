@@ -11,20 +11,32 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Môn học của một người dùng. `id` là slug tĩnh lấy từ `lib/subjects.ts`
+/// (vd. "bilanzen") và được dùng nguyên văn trong URL, nên mỗi người dùng có
+/// một hàng riêng cho cùng slug → khoá chính là cặp `(userId, id)`.
+///
+/// Nhờ vậy hai người dùng có thể cùng học "bilanzen" mà tài liệu / đề thi của
+/// người này không bao giờ lẫn sang người kia: mọi query đều lọc thêm `userId`.
 model Subject {
-  id          String     @id @default(uuid())
+  id          String
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   nameDe      String
   description String?
   documents   Document[]
   exams       Exam[]
   createdAt   DateTime   @default(now())
+
+  @@id([userId, id])
 }
 
 model Document {
   id        String   @id @default(uuid())
+  /// Chủ sở hữu tài liệu, đồng thời là phần đầu của khoá ngoại tới `Subject`.
+  userId    String
   subjectId String
-  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subject   Subject  @relation(fields: [userId, subjectId], references: [userId, id], onDelete: Cascade)
   fileName  String
   // Kapitel-Titel (AI-Titel oder lesbarer Dateiname) für die Sidebar.
   title     String?
@@ -35,7 +47,71 @@ model Document {
   truncated Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@index([subjectId, language, createdAt])
+  @@index([userId, subjectId, language, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js (NextAuth.js v5) – schema chuẩn cho adapter @auth/prisma-adapter
+// ---------------------------------------------------------------------------
+// Bốn model dưới đây do thư viện Auth.js quy định (tên model + tên field phải
+// giữ nguyên). Adapter dùng chúng để lưu người dùng Google, liên kết tài khoản
+// OAuth và phiên đăng nhập trong database.
+//
+// Sau khi thêm, đồng bộ database bằng `npm run db:push` và tạo lại client
+// bằng `npm run db:generate` (hoặc `npx prisma generate`).
+
+/// Người dùng đăng nhập bằng Google. `emailVerified` do Google trả về.
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  /// Mọi môn học (và tài liệu / đề thi bên trong) thuộc về người dùng này.
+  subjects      Subject[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+/// Tài khoản OAuth liên kết với `User` (một dòng cho mỗi provider).
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@id([provider, providerAccountId])
+}
+
+/// Phiên đăng nhập lưu trong database (session strategy "database").
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Token dùng một lần cho các luồng email (magic link, xác thực email).
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
 }
 
 /// Một đề do AI tạo cho một chương (`kind = "chapter"`) hoặc cho cả học phần
@@ -44,8 +120,10 @@ model Document {
 /// kết quả AI vừa tạo (mỗi lần tạo đề là một lần gọi DeepSeek).
 model Exam {
   id              String   @id @default(uuid())
+  /// Chủ sở hữu đề thi, đồng thời là phần đầu của khoá ngoại tới `Subject`.
+  userId          String
   subjectId       String
-  subject         Subject  @relation(fields: [subjectId], references: [id])
+  subject         Subject  @relation(fields: [userId, subjectId], references: [userId, id], onDelete: Cascade)
   /// Chương nguồn khi `kind = "chapter"`, null cho đề thi cuối kỳ.
   documentId      String?
   kind            String
@@ -57,5 +135,5 @@ model Exam {
   content         String
   createdAt       DateTime @default(now())
 
-  @@index([subjectId, language, createdAt])
+  @@index([userId, subjectId, language, createdAt])
 }

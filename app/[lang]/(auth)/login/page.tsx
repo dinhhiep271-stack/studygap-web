@@ -105,6 +105,8 @@ async function LoginContent({ params, searchParams }: LoginPageProps) {
       <LoginForm
         next={destination}
         labels={{
+          google: login.google,
+          googleRedirecting: login.googleRedirecting,
           username: login.usernameLabel,
           password: login.passwordLabel,
           submit: login.submit,
