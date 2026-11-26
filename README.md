@@ -117,7 +117,9 @@ label.
 ## Database (Prisma 7 + SQLite)
 
 - `prisma/schema.prisma` – `Subject`, `Document` and `Exam` models.
-- `prisma.config.ts` – Prisma CLI config; loads `DATABASE_URL` from `.env`.
+- `prisma.config.ts` – Prisma CLI config; reads `DATABASE_URL` from `.env` and
+  falls back to `file:./dev.db` when it is unset, so `prisma generate` also works
+  on a CI/Vercel build without environment variables or a database file.
 - `lib/prisma.ts` – Prisma Client singleton using the `better-sqlite3` driver
   adapter (required by Prisma 7).
 - `lib/subject-documents.ts` – reads/writes the `Document` table. `Document.content`
@@ -193,9 +195,37 @@ material for a fresh upload.
 ## Scripts
 
 ```bash
-npm run dev    # development server
-npm run build  # production build
-npm run start  # serve the production build
-npm run lint   # ESLint
+npm run dev         # development server
+npm run build       # generate the Prisma Client, then build Next.js
+npm run start       # serve the production build
+npm run lint        # ESLint
 ```
+
+`lib/generated/` is git-ignored, so a fresh clone has no Prisma Client.
+`npm run build` therefore runs `prisma generate` first (and the `postinstall`
+script repeats it after `npm install`), which is exactly what a Vercel build
+needs — no manual generation step and no committed generated code.
+
+## Deployment (Vercel)
+
+Import the repository, keep the default framework preset (build command
+`npm run build`, output `.next`) and add the environment variables:
+
+| Variable                       | Purpose                                                        |
+| ------------------------------ | -------------------------------------------------------------- |
+| `AUTH_USERNAME`                | Login name (default `admin`)                                    |
+| `AUTH_PASSWORD`                | Password (default `Imachi.051937` — change it!)                 |
+| `AUTH_SECRET`                  | Long random value that signs the session cookie                 |
+| `STUDYGAP_API_URL`             | Server-side base URL of studygap-ai (`https://studygap-ai.onrender.com`) |
+| `NEXT_PUBLIC_STUDYGAP_API_URL` | Same URL for the browser; inlined at build time                 |
+| `DATABASE_URL` (optional)      | SQLite connection string; defaults to `file:./dev.db`           |
+
+`AUTH_*` and `STUDYGAP_API_URL` are read at request time, so changing them only
+needs a redeploy. `NEXT_PUBLIC_*` is baked into the bundle, so it needs a rebuild.
+
+**SQLite caveat:** a Vercel function has no persistent disk (only `/tmp`), so
+`dev.db` is not shared between requests or deployments. The pages, the login and
+the AI calls work, but uploaded documents and generated exams are not stored
+durably. For a real deployment use a hosted database (Postgres, Turso, …) and
+point the Prisma datasource at it.
 
