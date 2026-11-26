@@ -10,6 +10,7 @@ import {
   type DragEvent,
   type FormEvent,
 } from "react";
+import { normalizeApiBaseUrl } from "@/lib/api-url";
 import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/locales";
 import { parseCurriculum, type ParsedCurriculum } from "@/lib/curriculum";
@@ -25,13 +26,13 @@ const MAX_FILES = 10;
 /**
  * Python/FastAPI service (studygap-ai) that turns documents (PDF, Word, Excel,
  * plain text and CSV) into course plans. It runs on Render
- * (https://studygap-ai.onrender.com); set NEXT_PUBLIC_STUDYGAP_API_URL to
- * override the address, e.g. when running the API locally.
+ * (https://studygap-ai.onrender.com); `NEXT_PUBLIC_STUDYGAP_API_URL` can
+ * override the address, and `normalizeApiBaseUrl` keeps the result HTTPS with
+ * no trailing slash.
  */
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_STUDYGAP_API_URL ?? "https://studygap-ai.onrender.com"
-).replace(/\/+$/, "");
-const PROCESS_DOCUMENT_URL = `${API_BASE_URL}/process-document`;
+const PROCESS_DOCUMENT_URL = `${normalizeApiBaseUrl(
+  process.env.NEXT_PUBLIC_STUDYGAP_API_URL,
+)}/process-document`;
 
 type UploadError = "unsupported" | "tooLarge" | "tooMany" | "noFile";
 

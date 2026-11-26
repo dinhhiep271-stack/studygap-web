@@ -1,3 +1,4 @@
+import { normalizeApiBaseUrl } from "@/lib/api-url";
 import type { CurriculumQuestion, ParsedCurriculum } from "@/lib/curriculum";
 import { parseQuestions } from "@/lib/curriculum";
 import {
@@ -40,11 +41,14 @@ export type ExamContextChapter = {
 const MAX_CONTEXT_CHARS = 14_000;
 const MAX_EXISTING_QUESTIONS = 15;
 
-const AI_BASE_URL = (
-  process.env.STUDYGAP_API_URL ??
-  process.env.NEXT_PUBLIC_STUDYGAP_API_URL ??
-  "https://studygap-ai.onrender.com"
-).replace(/\/+$/, "");
+/**
+ * Server-side base URL of the AI service. `STUDYGAP_API_URL` wins; falling back
+ * to the public variable keeps one setting enough for both the server and the
+ * browser. `normalizeApiBaseUrl` guarantees HTTPS and no trailing slash.
+ */
+const AI_BASE_URL = normalizeApiBaseUrl(
+  process.env.STUDYGAP_API_URL || process.env.NEXT_PUBLIC_STUDYGAP_API_URL,
+);
 
 const AI_TIMEOUT_MS = 240_000;
 

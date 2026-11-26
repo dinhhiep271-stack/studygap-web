@@ -131,6 +131,9 @@ label.
   answers (choices, numbers, keywords, true/false, table cells).
 - `lib/exam.ts` – pure exam domain: question count/duration limits, the
   `GeneratedExam` shape, `gradeExam` and the German / Vietnamese grade scale.
+- `lib/api-url.ts` – one normaliser for the studygap-ai base URL
+  (`https://studygap-ai.onrender.com`). It trims the env value, removes trailing
+  slashes and keeps the URL on HTTPS, for both the server and the browser.
 - `lib/exam-service.ts` – builds the compact "knowledge framework" from the
   stored chapters, calls `POST /generate-exam` on the AI service, filters and
   de-duplicates the returned questions, and persists the paper in the `Exam`
@@ -138,9 +141,12 @@ label.
   `NEXT_PUBLIC_STUDYGAP_API_URL`, then `https://studygap-ai.onrender.com`).
   The upload page calls `POST /process-document` from the browser, so there the
   API address comes from `NEXT_PUBLIC_STUDYGAP_API_URL` (inlined at build time,
-  same Render fallback). Point either variable at `http://127.0.0.1:8000` to use
-  a locally running API. Because the browser talks to `studygap-ai.onrender.com`
-  directly, the FastAPI service must allow this site's origin via CORS.
+  same Render fallback). Both go through `normalizeApiBaseUrl` (`lib/api-url.ts`),
+  so the requests always hit
+  `https://studygap-ai.onrender.com/generate-exam` and
+  `https://studygap-ai.onrender.com/process-document`. Because the browser talks
+  to `studygap-ai.onrender.com` directly, the FastAPI service must allow this
+  site's origin via CORS.
 
 ```bash
 npm run db:push      # create/update the SQLite tables (dev.db)
