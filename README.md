@@ -83,7 +83,11 @@ users or public sign-up, use an auth library instead.
 
 ## Internationalization
 
-- `lib/locales.ts` – supported locales, cookie name and locale helpers.
+- `lib/locales.ts` – supported locales (`de`, `vi`), the default locale (`vi`),
+  the cookie name, the text direction of every locale (`localeDirections`, both
+  LTR) and locale helpers. `<html>` is rendered with an explicit `lang` and
+  `dir` taken from this module, so the shell can never inherit an RTL direction
+  from the browser or an extension.
 - `lib/i18n.ts` – typed UI dictionaries for German and Vietnamese.
 - `lib/subjects.ts` – subject metadata (id, name, code, semester, summary) with localized names and
   summaries. Learning material now comes from the database.

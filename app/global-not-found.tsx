@@ -6,6 +6,7 @@ import { getDictionary } from "@/lib/i18n";
 import {
   defaultLocale,
   hasLocale,
+  localeDirection,
   locales,
   type Locale,
 } from "@/lib/locales";
@@ -103,6 +104,7 @@ export default async function GlobalNotFound() {
   return (
     <html
       lang={locale}
+      dir={localeDirection(locale)}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-900">

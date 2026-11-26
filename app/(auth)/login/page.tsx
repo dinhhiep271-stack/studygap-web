@@ -8,6 +8,7 @@ import {
   defaultLocale,
   hasLocale,
   localeCookie,
+  localeDirection,
   localeNames,
   locales,
   type Locale,
@@ -75,6 +76,7 @@ async function LoginContent({ searchParams }: LoginPageProps) {
   return (
     <main
       lang={lang}
+      dir={localeDirection(lang)}
       className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-16"
     >
       <div className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">

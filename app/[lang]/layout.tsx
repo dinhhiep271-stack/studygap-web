@@ -10,7 +10,7 @@ import {
 } from "@/components/language-switcher";
 import { LogoutButton } from "@/components/logout-button";
 import { getDictionary } from "@/lib/i18n";
-import { defaultLocale, hasLocale, locales } from "@/lib/locales";
+import { defaultLocale, hasLocale, localeDirection, locales } from "@/lib/locales";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -74,6 +74,7 @@ export default async function RootLayout({
   return (
     <html
       lang={lang}
+      dir={localeDirection(lang)}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-900">

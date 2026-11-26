@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
-import { defaultLocale } from "@/lib/locales";
+import { defaultLocale, localeDirection } from "@/lib/locales";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -30,6 +30,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang={defaultLocale}
+      dir={localeDirection(defaultLocale)}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-900">
