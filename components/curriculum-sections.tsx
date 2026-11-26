@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ConceptLabels } from "@/lib/concept";
 import type {
   CurriculumLabels,
   CurriculumQuestion,
@@ -326,11 +327,17 @@ export function CurriculumContent({
   curriculum,
   labels,
   showQuestions = true,
+  conceptLabels,
+  onConceptSelect,
 }: {
   curriculum: ParsedCurriculum;
   labels: CurriculumLabels;
   /** The subject workspace renders questions in the practice center instead. */
   showQuestions?: boolean;
+  /** Captions for the clickable concept cards (subject page only). */
+  conceptLabels?: ConceptLabels;
+  /** When set, key concepts become buttons that open the AI explainer. */
+  onConceptSelect?: (concept: string) => void;
 }) {
   return (
     <>
@@ -356,28 +363,77 @@ export function CurriculumContent({
       >
         {curriculum.keyConcepts.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2">
-            {curriculum.keyConcepts.map((concept, index) => (
-              <li
-                key={`${index}-${concept.name}`}
-                className="rounded-xl border border-zinc-200 bg-white p-4"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+            {curriculum.keyConcepts.map((concept, index) => {
+              // On the subject page the cards open the AI explainer; the upload
+              // preview keeps them read-only because it has no API context.
+              const interactive = conceptLabels && onConceptSelect;
+
+              const content = (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
+                      interactive
+                        ? "bg-emerald-600 text-white"
+                        : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                    }`}
+                  >
                     {index + 1}
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-zinc-900">
                       {concept.name}
-                    </p>
+                    </span>
                     {concept.explanation ? (
-                      <p className="mt-1 text-sm leading-6 text-zinc-600">
+                      <span className="mt-1 block text-sm leading-6 text-zinc-600">
                         {concept.explanation}
-                      </p>
+                      </span>
                     ) : null}
-                  </div>
-                </div>
-              </li>
-            ))}
+                    {interactive ? (
+                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                        {conceptLabels.action}
+                        <span aria-hidden="true">→</span>
+                      </span>
+                    ) : null}
+                  </span>
+                  {interactive ? (
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      className="mt-1 h-4 w-4 shrink-0 text-zinc-300 transition-colors group-hover:text-emerald-600"
+                    >
+                      <path
+                        d="M7.5 4.5L13 10l-5.5 5.5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : null}
+                </>
+              );
+
+              return (
+                <li key={`${index}-${concept.name}`} className="min-w-0">
+                  {conceptLabels && onConceptSelect ? (
+                    <button
+                      type="button"
+                      aria-haspopup="dialog"
+                      onClick={() => onConceptSelect(concept.name)}
+                      className="group flex h-full w-full items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4">
+                      {content}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <EmptyNote>{labels.emptyConcepts}</EmptyNote>

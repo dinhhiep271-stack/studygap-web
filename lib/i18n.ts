@@ -1,3 +1,4 @@
+import type { ConceptLabels } from "@/lib/concept";
 import type { CurriculumLabels } from "@/lib/curriculum";
 import type { Locale } from "@/lib/locales";
 import type { PracticeFormat } from "@/lib/practice";
@@ -56,6 +57,8 @@ export type Dictionary = {
   };
   /** Captions for the AI curriculum sections (teaching + questions). */
   curriculum: CurriculumLabels;
+  /** AI concept explainer (`POST /explain-concept`) dialog and cards. */
+  concept: ConceptLabels;
   /** Practice center: one tab per exercise format. */
   practice: {
     title: string;
@@ -300,6 +303,43 @@ const de: Dictionary = {
       fill_in_the_blank: "Lückentext",
       true_false: "Richtig/Falsch",
       table: "Tabelle",
+    },
+  },
+  concept: {
+    action: "Begriff erklären",
+    dialogEyebrow: "KI-Erklärung",
+    loading: "Der Begriff wird analysiert …",
+    loadingHint:
+      "Die KI liest den Begriff im Kontext dieses Kapitels und erstellt Definition, Erklärung, Zusammenhang und Kritik.",
+    errorTitle: "Erklärung nicht verfügbar",
+    errors: {
+      network:
+        "Der KI-Dienst ist nicht erreichbar. Prüfe deine Verbindung und versuche es noch einmal.",
+      timeout:
+        "Die Antwort hat zu lange gedauert. Versuche es gleich noch einmal.",
+      upstream:
+        "Der KI-Dienst konnte die Erklärung gerade nicht erstellen. Bitte versuche es später noch einmal.",
+      empty:
+        "Die KI hat keine verwertbare Erklärung geliefert. Versuche es noch einmal.",
+      "missing-concept":
+        "Der Begriff fehlt in der Anfrage. Lade die Seite neu und versuche es erneut.",
+      "invalid-body":
+        "Die Anfrage war unvollständig. Lade die Seite neu und versuche es erneut.",
+      "invalid-json":
+        "Die Anfrage war unvollständig. Lade die Seite neu und versuche es erneut.",
+      unauthorized: "Deine Sitzung ist abgelaufen. Melde dich neu an.",
+      unknown: "Etwas ist schiefgelaufen. Bitte versuche es noch einmal.",
+    },
+    retry: "Noch einmal versuchen",
+    close: "Schließen",
+    emptySection: "Zu diesem Abschnitt liegt keine Antwort vor.",
+    disclaimer:
+      "KI-generierte Erklärung – kann Fehler enthalten. Prüfe sie anhand deines Materials.",
+    sections: {
+      definition: "Definition",
+      erklaerung: "Erklärung",
+      zusammenhang: "Zusammenhang",
+      kritik: "Kritik",
     },
   },
   practice: {
@@ -568,6 +608,38 @@ const vi: Dictionary = {
       fill_in_the_blank: "Điền khuyết",
       true_false: "Đúng/Sai",
       table: "Bảng",
+    },
+  },
+  concept: {
+    action: "Giải thích khái niệm",
+    dialogEyebrow: "AI giải thích",
+    loading: "Đang phân tích khái niệm …",
+    loadingHint:
+      "AI đọc khái niệm trong ngữ cảnh của chương này và tạo định nghĩa, giải thích, liên hệ và phản biện.",
+    errorTitle: "Chưa thể giải thích",
+    errors: {
+      network: "Không kết nối được dịch vụ AI. Hãy kiểm tra mạng và thử lại.",
+      timeout: "Phản hồi mất quá nhiều thời gian. Hãy thử lại sau một chút.",
+      upstream:
+        "Dịch vụ AI hiện chưa tạo được phần giải thích. Hãy thử lại sau.",
+      empty: "AI trả về nội dung không đọc được. Hãy thử lại.",
+      "missing-concept":
+        "Thiếu tên khái niệm trong yêu cầu. Hãy tải lại trang và thử lại.",
+      "invalid-body": "Yêu cầu chưa đầy đủ. Hãy tải lại trang và thử lại.",
+      "invalid-json": "Yêu cầu chưa đầy đủ. Hãy tải lại trang và thử lại.",
+      unauthorized: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.",
+      unknown: "Đã có lỗi xảy ra. Hãy thử lại.",
+    },
+    retry: "Thử lại",
+    close: "Đóng",
+    emptySection: "Phần này chưa có nội dung.",
+    disclaimer:
+      "Nội dung do AI tạo – có thể có sai sót. Hãy đối chiếu với tài liệu của bạn.",
+    sections: {
+      definition: "Định nghĩa",
+      erklaerung: "Giải thích",
+      zusammenhang: "Liên hệ",
+      kritik: "Phản biện",
     },
   },
   practice: {

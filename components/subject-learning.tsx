@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ConceptDialog } from "@/components/concept-dialog";
 import { CurriculumContent } from "@/components/curriculum-sections";
 import { ExamRunner } from "@/components/exam-runner";
 import { FinalExamPanel } from "@/components/final-exam-panel";
@@ -66,6 +67,8 @@ export function SubjectLearning({
   const [activeExam, setActiveExam] = useState<GeneratedExam | null>(
     initialExam ?? null,
   );
+  /** Key concept whose AI explanation is open; `null` keeps the dialog closed. */
+  const [activeConcept, setActiveConcept] = useState<string | null>(null);
   const progress = useChapterProgress(
     `studygap:subject-progress:${subjectId}`,
   );
@@ -91,6 +94,17 @@ export function SubjectLearning({
   ).length;
   const percent = Math.round((completedCount / chapters.length) * 100);
   const isActiveDone = progress.isComplete(activeChapter.id);
+
+  // Grounding text for the AI explainer: only the current chapter, so a model
+  // answer stays close to the material the learner is looking at.
+  const conceptContext = [
+    activeChapter.curriculum.summary,
+    ...activeChapter.curriculum.formulas.map((formula) =>
+      [formula.formula, formula.description].filter(Boolean).join(" – "),
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   function showChapter(chapterId: string) {
     setActiveChapterId(chapterId);
@@ -429,6 +443,8 @@ export function SubjectLearning({
                   curriculum={activeChapter.curriculum}
                   labels={dict.curriculum}
                   showQuestions={false}
+                  conceptLabels={dict.concept}
+                  onConceptSelect={setActiveConcept}
                 />
 
                 <div className="mt-8 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-4">
@@ -464,6 +480,19 @@ export function SubjectLearning({
           </>
         )}
       </div>
+
+      {/*
+       * Keyed by concept so every opening starts in the loading state and the
+       * previous request is aborted; closing unmounts it and restores focus.
+       */}
+      <ConceptDialog
+        key={activeConcept ?? "closed"}
+        concept={activeConcept}
+        lang={lang}
+        labels={dict.concept}
+        context={conceptContext}
+        onClose={() => setActiveConcept(null)}
+      />
     </div>
   );
 }

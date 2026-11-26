@@ -1,0 +1,94 @@
+import { normalizeApiBaseUrl } from "@/lib/api-url";
+import {
+  parseConceptExplanation,
+  type ConceptErrorCode,
+  type ConceptExplanation,
+} from "@/lib/concept";
+
+/**
+ * Server-only helper for the AI concept explainer (`POST /explain-concept`).
+ *
+ * `STUDYGAP_API_URL` is a server variable (it is not inlined into the client
+ * bundle), so the browser calls the `POST /api/concepts` route handler, which
+ * uses this helper. `NEXT_PUBLIC_STUDYGAP_API_URL` is only a fallback so one
+ * setting keeps working for both the server and the browser.
+ */
+
+const AI_BASE_URL = normalizeApiBaseUrl(
+  process.env.STUDYGAP_API_URL || process.env.NEXT_PUBLIC_STUDYGAP_API_URL,
+);
+
+/** One concept is a single short model call; keep the upstream budget bounded. */
+const AI_TIMEOUT_MS = 120_000;
+
+export class ConceptExplanationError extends Error {
+  readonly code: ConceptErrorCode;
+
+  constructor(code: ConceptErrorCode, message?: string) {
+    super(message ?? code);
+    this.name = "ConceptExplanationError";
+    this.code = code;
+  }
+}
+
+type ExplainResponse = {
+  success?: boolean;
+  concept?: unknown;
+  definition?: unknown;
+  erklaerung?: unknown;
+  zusammenhang?: unknown;
+  kritik?: unknown;
+  detail?: string;
+  error?: string;
+};
+
+/** Calls the FastAPI service; all failures become `ConceptExplanationError`. */
+export async function explainConcept({
+  concept,
+  context = "",
+  lang,
+}: {
+  concept: string;
+  /** Related chapter material the model may ground the explanation on. */
+  context?: string;
+  lang: string;
+}): Promise<ConceptExplanation> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${AI_BASE_URL}/explain-concept`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ concept, context, lang }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new ConceptExplanationError("timeout");
+    }
+
+    throw new ConceptExplanationError("network");
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | ExplainResponse
+    | null;
+
+  if (!response.ok) {
+    throw new ConceptExplanationError(
+      "upstream",
+      payload?.detail ??
+        payload?.error ??
+        `AI service answered ${response.status}`,
+    );
+  }
+
+  const explanation = parseConceptExplanation(payload, concept);
+
+  if (!explanation) {
+    throw new ConceptExplanationError("empty");
+  }
+
+  return explanation;
+}

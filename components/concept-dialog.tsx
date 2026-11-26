@@ -1,0 +1,337 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/spinner";
+import {
+  conceptSectionKeys,
+  type ConceptErrorCode,
+  type ConceptExplanation,
+  type ConceptLabels,
+  type ConceptSectionKey,
+} from "@/lib/concept";
+import {
+  ConceptRequestError,
+  fetchConceptExplanation,
+} from "@/lib/concept-client";
+
+/**
+ * AI explainer dialog for the key concepts of a chapter.
+ *
+ * It is mounted with `concept = null` while closed. Selecting a concept opens
+ * it immediately in the loading state and calls `POST /api/concepts`; closing
+ * the dialog (or choosing another concept) aborts the pending request.
+ */
+
+const sectionStyles: Record<
+  ConceptSectionKey,
+  { card: string; badge: string; title: string }
+> = {
+  definition: {
+    card: "border-emerald-100 bg-emerald-50/60",
+    badge: "bg-emerald-600 text-white",
+    title: "text-emerald-900",
+  },
+  erklaerung: {
+    card: "border-sky-100 bg-sky-50/60",
+    badge: "bg-sky-600 text-white",
+    title: "text-sky-900",
+  },
+  zusammenhang: {
+    card: "border-violet-100 bg-violet-50/60",
+    badge: "bg-violet-600 text-white",
+    title: "text-violet-900",
+  },
+  kritik: {
+    card: "border-amber-100 bg-amber-50/60",
+    badge: "bg-amber-500 text-white",
+    title: "text-amber-900",
+  },
+};
+
+export function ConceptDialog({
+  concept,
+  lang,
+  labels,
+  context,
+  onClose,
+}: {
+  /** Concept name to explain; `null` keeps the dialog closed. */
+  concept: string | null;
+  lang: string;
+  labels: ConceptLabels;
+  /** Related chapter material forwarded to the AI as grounding context. */
+  context?: string;
+  onClose: () => void;
+}) {
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  const [explanation, setExplanation] = useState<ConceptExplanation | null>(
+    null,
+  );
+  const [errorCode, setErrorCode] = useState<ConceptErrorCode>("unknown");
+  const [attempt, setAttempt] = useState(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // One request per concept/language/retry. Closing the dialog aborts it so a
+  // slow answer never overwrites the state of the next concept.
+  useEffect(() => {
+    if (!concept) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetchConceptExplanation({ concept, lang, context }, controller.signal)
+      .then((result) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setExplanation(result);
+        setStatus("ready");
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setErrorCode(
+          error instanceof ConceptRequestError ? error.code : "unknown",
+        );
+        setStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [attempt, concept, context, lang]);
+
+  // Lock the page behind the modal and return focus to the concept card.
+  useEffect(() => {
+    if (!concept) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus?.();
+    };
+  }, [concept]);
+
+  // Escape closes the dialog; Tab cycles through its buttons.
+  useEffect(() => {
+    if (!concept) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const dialog = dialogRef.current;
+
+      if (!dialog) {
+        return;
+      }
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.offsetParent !== null);
+
+      if (focusable.length === 0) {
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [concept, onClose]);
+
+  if (!concept) {
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-zinc-950/45 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="concept-dialog-title"
+        aria-busy={status === "loading" ? "true" : undefined}
+        className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl"
+      >
+        <div className="flex items-start gap-4 border-b border-zinc-100 bg-emerald-50/70 px-6 py-5">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-lg text-white shadow-sm"
+          >
+            ✦
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold tracking-wide text-emerald-700 uppercase">
+              {labels.dialogEyebrow}
+            </p>
+            <h2
+              id="concept-dialog-title"
+              className="mt-1 text-xl font-semibold tracking-tight break-words text-zinc-900 sm:text-2xl"
+            >
+              {concept}
+            </h2>
+          </div>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            aria-label={labels.close}
+            title={labels.close}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              className="h-4 w-4"
+            >
+              <path
+                d="M5 5l10 10M15 5L5 15"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {status === "loading" ? (
+            <div role="status" aria-live="polite" className="py-6 text-center">
+              <Spinner className="mx-auto h-9 w-9 text-emerald-600" />
+              <p className="mt-4 text-sm font-semibold text-zinc-900">
+                {labels.loading}
+              </p>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-zinc-500">
+                {labels.loadingHint}
+              </p>
+              <div
+                aria-hidden="true"
+                className="mx-auto mt-6 max-w-md animate-pulse space-y-3"
+              >
+                <div className="h-3 rounded-full bg-zinc-100" />
+                <div className="h-3 w-11/12 rounded-full bg-zinc-100" />
+                <div className="h-3 w-4/5 rounded-full bg-zinc-100" />
+              </div>
+            </div>
+          ) : status === "error" ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 px-5 py-4"
+            >
+              <p className="text-sm font-semibold text-red-800">
+                {labels.errorTitle}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-red-700">
+                {labels.errors[errorCode]}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus("loading");
+                  setAttempt((value) => value + 1);
+                }}
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+              >
+                {labels.retry}
+              </button>
+            </div>
+          ) : explanation ? (
+            <div className="space-y-3">
+              {conceptSectionKeys.map((key, index) => {
+                const style = sectionStyles[key];
+                const content = explanation[key];
+
+                return (
+                  <section
+                    key={key}
+                    aria-label={labels.sections[key]}
+                    className={`rounded-xl border px-4 py-3.5 ${style.card}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${style.badge}`}
+                      >
+                        {index + 1}
+                      </span>
+                      <h3
+                        className={`text-sm font-semibold tracking-wide uppercase ${style.title}`}
+                      >
+                        {labels.sections[key]}
+                      </h3>
+                    </div>
+                    <p
+                      className={`mt-2 text-sm leading-7 whitespace-pre-line ${
+                        content ? "text-zinc-700" : "text-zinc-500 italic"
+                      }`}
+                    >
+                      {content || labels.emptySection}
+                    </p>
+                  </section>
+                );
+              })}
+
+              <p className="pt-1 text-xs leading-5 text-zinc-400">
+                {labels.disclaimer}
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex justify-end border-t border-zinc-100 bg-zinc-50/80 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-300 bg-white px-5 text-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+          >
+            {labels.close}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
