@@ -166,9 +166,15 @@ export function SubjectLearning({
           ) : null}
         </div>
 
+        {/*
+         * The chapter list gets its own scrollbar (`max-h` + `overflow-y-auto`)
+         * so a long list never stretches the sidebar to the height of the
+         * chapter content on the right. `sticky top-24` keeps it in view and
+         * `pr-2` keeps the text clear of the scrollbar.
+         */}
         <nav
           aria-label={dict.subject.chapterListLabel}
-          className="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm"
+          className="sticky top-24 mt-4 max-h-[calc(100vh-120px)] overflow-x-hidden overflow-y-auto rounded-2xl border border-zinc-200 bg-white pr-2 shadow-sm"
         >
           <p className="border-b border-zinc-100 px-4 py-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
             {dict.subject.chapterListLabel}
