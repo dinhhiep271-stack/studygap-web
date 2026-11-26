@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+// Connection details (url) live in prisma.config.ts -> datasource.url
+datasource db {
+  provider = "sqlite"
+}
+
+model Subject {
+  id          String     @id @default(uuid())
+  name        String
+  nameDe      String
+  description String?
+  documents   Document[]
+  exams       Exam[]
+  createdAt   DateTime   @default(now())
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  fileName  String
+  // Kapitel-Titel (AI-Titel oder lesbarer Dateiname) für die Sidebar.
+  title     String?
+  // Ngôn ngữ mà AI đã dùng để tạo nội dung ("de" hoặc "vi").
+  language  String   @default("vi")
+  content   String   // Lưu JSON của giáo trình và câu hỏi dưới dạng chuỗi
+  pages     Int?
+  truncated Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([subjectId, language, createdAt])
+}
+
+/// Một đề do AI tạo cho một chương (`kind = "chapter"`) hoặc cho cả học phần
+/// (`kind = "final"`). `content` lưu JSON `{ questions, chapters }` nguyên bản;
+/// đề được lưu lại để người học có thể mở lại bằng `?exam=<id>` và không mất
+/// kết quả AI vừa tạo (mỗi lần tạo đề là một lần gọi DeepSeek).
+model Exam {
+  id              String   @id @default(uuid())
+  subjectId       String
+  subject         Subject  @relation(fields: [subjectId], references: [id])
+  /// Chương nguồn khi `kind = "chapter"`, null cho đề thi cuối kỳ.
+  documentId      String?
+  kind            String
+  language        String   @default("vi")
+  /// Tên phạm vi đề: tiêu đề chương, hoặc tên môn học cho đề cuối kỳ.
+  title           String
+  durationMinutes Int
+  questionCount   Int
+  content         String
+  createdAt       DateTime @default(now())
+
+  @@index([subjectId, language, createdAt])
+}

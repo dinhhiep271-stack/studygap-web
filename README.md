@@ -1,36 +1,183 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Studygap
 
-## Getting Started
+A bilingual (German / Vietnamese) study-material browser built with Next.js 16
+(App Router), React 19, Tailwind CSS 4 and TypeScript. The whole app is private:
+a single login protects every page and API route.
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The root URL redirects to
+the last selected language (falling back to Vietnamese).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route                   | Description                                        |
+| ----------------------- | -------------------------------------------------- |
+| `/login`                | Login form (own root layout, not locale-prefixed)  |
+| `/`                     | Redirects to the preferred locale                  |
+| `/[lang]`               | Subject list (`de` or `vi`)                        |
+| `/[lang]/subject/[id]`  | Learning path: chapters, progress, content and practice center |
+| `/[lang]/upload`        | Document upload (multi-file, calls the studygap-ai API) |
+| `POST /api/auth/login`  | Checks the credentials and stores the session cookie |
+| `POST /api/auth/logout` | Clears the session cookie                          |
+| `POST /api/documents`   | Stores one AI result for a subject in SQLite       |
+| `POST /api/exams`       | Generates + stores an AI paper (chapter practice or final exam) |
 
-## Learn More
+## Login (single-user access)
 
-To learn more about Next.js, take a look at the following resources:
+Every page and API route is private. The proxy checks a signed, HTTP-only
+session cookie before rendering: visitors without a valid session are sent to
+`/login?next=<requested path>&lang=<locale>` (API requests get a `401` JSON
+response instead). After a successful login the form continues to `next`; the
+path is validated so `?next=` cannot leave the site.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `app/(auth)/layout.tsx` – root layout of the login page (`<html>`/`<body>`,
+  no app header or footer). The route group keeps `/login` free of a locale
+  prefix and the app shell.
+- `app/(auth)/login/page.tsx` – login card. It reads `?lang=` (falling back to
+  the `studygap-lang` cookie) and renders the German or Vietnamese labels.
+- `app/(auth)/login/login-form.tsx` – client form that posts to the API.
+- `lib/auth.ts` – credentials from the environment, HMAC-SHA256 signed session
+  tokens (Web Crypto, so the proxy and route handlers share the code), constant
+  time comparison and the `next` path validation.
+- `app/api/auth/login/route.ts` / `app/api/auth/logout/route.ts` – set/clear the
+  `studygap-session` cookie (HttpOnly, SameSite=Lax, 30 days).
+- `components/logout-button.tsx` – "Abmelden / Đăng xuất" in the app header.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Credentials
 
-## Deploy on Vercel
+The login is defined in `.env` (defaults are used when the variables are unset):
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable             | Default              | Purpose                                                    |
+| -------------------- | -------------------- | ---------------------------------------------------------- |
+| `AUTH_USERNAME`      | `admin`              | Login name                                                 |
+| `AUTH_PASSWORD`      | `Imachi.051937`      | Password                                                   |
+| `AUTH_SECRET`        | dev default          | Key that signs the session cookie                          |
+| `AUTH_COOKIE_SECURE` | `true` in production | Set to `false` only for a production build over plain HTTP |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The default credentials are `admin` / `Imachi.051937` — change them before the app
+is reachable from another machine:
+
+1. Edit `.env` and set `AUTH_USERNAME` and `AUTH_PASSWORD`.
+2. Generate a fresh secret and set it as `AUTH_SECRET`:
+   `node -p "crypto.randomBytes(32).toString('base64url')"` (or
+   `openssl rand -base64 32`). Changing the secret signs every existing session
+   out, so do it whenever you rotate the password.
+3. Restart the server (`npm run dev` / `npm run start`) — the env values are read
+   on the server at request time, no code change or rebuild is needed. On a
+   hosting platform, update the variables and redeploy/restart the service.
+
+`AUTH_*` variables are server-only — they are never inlined into the browser
+bundle. Use HTTPS in production: the cookie is `Secure` there, so a production
+build served over plain HTTP would drop it (uncomment `AUTH_COOKIE_SECURE="false"`
+if you must run that way, e.g. over a LAN IP).
+
+This is intentionally a small single-user solution: one static credential pair,
+no user table, no rate limiting and no "remember this device" list. For several
+users or public sign-up, use an auth library instead.
+
+## Internationalization
+
+- `lib/locales.ts` – supported locales, cookie name and locale helpers.
+- `lib/i18n.ts` – typed UI dictionaries for German and Vietnamese.
+- `lib/subjects.ts` – subject metadata (id, name, code, semester, summary) with localized names and
+  summaries. Learning material now comes from the database.
+- `proxy.ts` – login gate for pages and API routes, redirects unprefixed paths
+  to the preferred locale, remembers the choice in the `studygap-lang` cookie,
+  and routes unknown subject slugs to the localized 404 page.
+- `app/[lang]/layout.tsx` – locale-aware `<html lang>`, navigation, language
+  switcher and the logout button.
+- `app/global-not-found.tsx` – localized global 404 (needed because the root
+  layout uses a top-level dynamic `[lang]` segment).
+
+The language switcher keeps the current path, so
+`/vi/subject/bwl-einfuehrung` becomes `/de/subject/bwl-einfuehrung`. UI labels,
+metadata, validation messages and 404 pages follow the selected language. Subject
+names are shown in the active language with the other language as a secondary
+label.
+
+## Database (Prisma 7 + SQLite)
+
+- `prisma/schema.prisma` – `Subject`, `Document` and `Exam` models.
+- `prisma.config.ts` – Prisma CLI config; loads `DATABASE_URL` from `.env`.
+- `lib/prisma.ts` – Prisma Client singleton using the `better-sqlite3` driver
+  adapter (required by Prisma 7).
+- `lib/subject-documents.ts` – reads/writes the `Document` table. `Document.content`
+  stores the JSON returned by studygap-ai and is normalised with
+  `parseCurriculum` (`lib/curriculum.ts`) before it reaches the UI.
+- `lib/chapters.ts` – turns the documents of a subject into the ordered chapter
+  list (Kapitel) shown in the sidebar.
+- `lib/practice.ts` – groups questions into the practice formats and grades the
+  answers (choices, numbers, keywords, true/false, table cells).
+- `lib/exam.ts` – pure exam domain: question count/duration limits, the
+  `GeneratedExam` shape, `gradeExam` and the German / Vietnamese grade scale.
+- `lib/exam-service.ts` – builds the compact "knowledge framework" from the
+  stored chapters, calls `POST /generate-exam` on the AI service, filters and
+  de-duplicates the returned questions, and persists the paper in the `Exam`
+  table. It uses `STUDYGAP_API_URL` (falling back to
+  `NEXT_PUBLIC_STUDYGAP_API_URL`, then `http://127.0.0.1:8000`).
+
+```bash
+npm run db:push      # create/update the SQLite tables (dev.db)
+npm run db:generate  # regenerate lib/generated/prisma
+npm run db:studio    # browse the data
+```
+
+`Document.subjectId` stores the subject slug from `lib/subjects.ts` (for example
+`bwl-einfuehrung`). Each row also stores the output `language` (`de` or `vi`),
+the page count, whether the AI input was truncated and a `title` used as the
+chapter name (the AI title, falling back to a readable file name). Every stored
+PDF is one chapter of the subject's learning path.
+
+The upload page posts every successful result to `POST /api/documents`
+(`{ subjectId, fileName, language, pages?, truncated?, curriculum }`), then
+redirects to `/[lang]/subject/[id]`. The subject page lets the learner switch
+between chapters in the sidebar, tick chapters as learned (progress is stored
+per browser in `localStorage`, key `studygap:subject-progress:<subjectId>`),
+read the chapter content (summary, key concepts, formulas, examples) and open
+the practice center, which offers one tab per exercise format: single choice,
+multiple response, calculation, fill-in-the-blank/Stichwort, true/false and
+fill-in-the-table. Each task has a check button that reveals the correct answer
+and the explanation. Content in the other language is not mixed in; a hint is
+shown instead. Chapter, tab and practice format can be deep-linked with
+`?chapter=<document id>&tab=practice&format=<format>`.
+
+The subject page also works as an exam center:
+
+- **Custom chapter paper** – every chapter's practice tab has an "Anzahl der
+  Aufgaben / Số câu muốn luyện" field and a "Neues Blatt erstellen / Tạo đề mới"
+  button. `POST /api/exams` sends that chapter's framework to the AI (new
+  questions only, mixed formats) and opens the untimed practice runner; submit
+  reveals the score and the explanation for every question.
+- **Final exam** – the sidebar entry below the chapter list opens the final exam
+  setup (every chapter of the subject, 5–30 questions, 30/60/90/120 minutes).
+  The runner shows a countdown, submits automatically when the time is up and
+  reports correct/incorrect/unanswered counts, percentage and the final grade
+  (German 1,0–5,0 scale, Vietnamese 10-point scale, pass ≥ 50 %).
+- Generated papers are stored in `Exam` (`content` = `{ chapters, questions }`),
+  so a reload resumes them. `?exam=<id>` deep-links to a stored paper; the
+  attempt start time is kept per browser
+  (`studygap:exam-start:<exam id>`) so the timer survives a reload while a stale
+  attempt (already expired) starts fresh.
+
+The AI service receives the UI locale as the optional multipart field `lang`
+(`de` / `vi`) and is instructed to write the curriculum in that language, so a
+German upload produces German content and a Vietnamese upload Vietnamese. Its
+JSON contract contains `teaching` (summary, key concepts, formulas, examples)
+and 10 `questions` covering the practice formats, so every practice tab has
+material for a fresh upload.
+
+## Scripts
+
+```bash
+npm run dev    # development server
+npm run build  # production build
+npm run start  # serve the production build
+npm run lint   # ESLint
+```
+
