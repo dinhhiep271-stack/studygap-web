@@ -391,7 +391,7 @@ const de: Dictionary = {
     reviewTitle: "Auswertung",
     errors: {
       network:
-        "Der KI-Dienst ist nicht erreichbar. Prüfe, ob die API unter http://127.0.0.1:8000 läuft.",
+        "Der KI-Dienst ist nicht erreichbar. Prüfe, ob die API unter https://studygap-ai.onrender.com läuft.",
       timeout: "Die KI hat zu lange gebraucht. Bitte versuche es erneut.",
       upstream: "Der KI-Dienst konnte das Blatt nicht erstellen. Bitte versuche es erneut.",
       invalid: "Die KI hat ein ungültiges Blatt geliefert. Bitte versuche es erneut.",
@@ -429,7 +429,7 @@ const de: Dictionary = {
       tooMany: "Es lassen sich höchstens 10 Dateien gleichzeitig verarbeiten.",
       noFile: "Bitte wähle zuerst mindestens eine Datei aus.",
       network:
-        "Der Server ist nicht erreichbar. Prüfe, ob die API unter http://127.0.0.1:8000 läuft.",
+        "Der Server ist nicht erreichbar. Prüfe, ob die API unter https://studygap-ai.onrender.com läuft.",
       unexpected:
         "Die Datei konnte nicht verarbeitet werden. Bitte versuche es erneut.",
       save: "Das Ergebnis konnte nicht in der Datenbank gespeichert werden. Bitte versuche es erneut.",
@@ -657,7 +657,7 @@ const vi: Dictionary = {
     reviewTitle: "Chữa bài",
     errors: {
       network:
-        "Không kết nối được dịch vụ AI. Hãy kiểm tra API đang chạy tại http://127.0.0.1:8000.",
+        "Không kết nối được dịch vụ AI. Hãy kiểm tra API đang chạy tại https://studygap-ai.onrender.com.",
       timeout: "AI phản hồi quá lâu. Vui lòng thử lại.",
       upstream: "Dịch vụ AI không tạo được đề. Vui lòng thử lại.",
       invalid: "AI trả về đề không hợp lệ. Vui lòng thử lại.",
@@ -695,7 +695,7 @@ const vi: Dictionary = {
       tooMany: "Chỉ có thể xử lý tối đa 10 tệp trong một lần.",
       noFile: "Vui lòng chọn ít nhất một tệp trước khi tải lên.",
       network:
-        "Không kết nối được tới máy chủ. Hãy kiểm tra API đang chạy tại http://127.0.0.1:8000.",
+        "Không kết nối được tới máy chủ. Hãy kiểm tra API đang chạy tại https://studygap-ai.onrender.com.",
       unexpected: "Không thể xử lý tệp này. Vui lòng thử lại.",
       save: "Không thể lưu kết quả vào cơ sở dữ liệu. Vui lòng thử lại.",
     },

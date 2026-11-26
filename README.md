@@ -120,7 +120,12 @@ label.
   stored chapters, calls `POST /generate-exam` on the AI service, filters and
   de-duplicates the returned questions, and persists the paper in the `Exam`
   table. It uses `STUDYGAP_API_URL` (falling back to
-  `NEXT_PUBLIC_STUDYGAP_API_URL`, then `http://127.0.0.1:8000`).
+  `NEXT_PUBLIC_STUDYGAP_API_URL`, then `https://studygap-ai.onrender.com`).
+  The upload page calls `POST /process-document` from the browser, so there the
+  API address comes from `NEXT_PUBLIC_STUDYGAP_API_URL` (inlined at build time,
+  same Render fallback). Point either variable at `http://127.0.0.1:8000` to use
+  a locally running API. Because the browser talks to `studygap-ai.onrender.com`
+  directly, the FastAPI service must allow this site's origin via CORS.
 
 ```bash
 npm run db:push      # create/update the SQLite tables (dev.db)

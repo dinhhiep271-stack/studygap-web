@@ -43,7 +43,7 @@ const MAX_EXISTING_QUESTIONS = 15;
 const AI_BASE_URL = (
   process.env.STUDYGAP_API_URL ??
   process.env.NEXT_PUBLIC_STUDYGAP_API_URL ??
-  "http://127.0.0.1:8000"
+  "https://studygap-ai.onrender.com"
 ).replace(/\/+$/, "");
 
 const AI_TIMEOUT_MS = 240_000;

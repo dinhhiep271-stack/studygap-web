@@ -24,11 +24,12 @@ const MAX_FILES = 10;
 
 /**
  * Python/FastAPI service (studygap-ai) that turns documents (PDF, Word, Excel,
- * plain text and CSV) into course plans. Point NEXT_PUBLIC_STUDYGAP_API_URL
- * elsewhere when the API is not on the default local port.
+ * plain text and CSV) into course plans. It runs on Render
+ * (https://studygap-ai.onrender.com); set NEXT_PUBLIC_STUDYGAP_API_URL to
+ * override the address, e.g. when running the API locally.
  */
 const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_STUDYGAP_API_URL ?? "http://127.0.0.1:8000"
+  process.env.NEXT_PUBLIC_STUDYGAP_API_URL ?? "https://studygap-ai.onrender.com"
 ).replace(/\/+$/, "");
 const PROCESS_DOCUMENT_URL = `${API_BASE_URL}/process-document`;
 
