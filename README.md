@@ -25,7 +25,7 @@ the last selected language (falling back to Vietnamese).
 | `/[lang]/subject/[id]`  | Learning path: chapters, progress, content and practice center |
 | `/[lang]/upload`        | Document upload (multi-file, calls the studygap-ai API) |
 | `POST /api/auth/login`  | Checks the credentials and stores the session cookie |
-| `POST /api/auth/logout` | Clears the session cookie                          |
+| `POST /api/auth/logout` | Ends the Google (Auth.js) session and clears the credentials cookie |
 | `POST /api/documents`   | Stores one AI result for a subject in SQLite       |
 | `POST /api/exams`       | Generates + stores an AI paper (chapter practice or final exam) |
 
@@ -53,8 +53,13 @@ validated so `?next=` can neither leave the site nor point back at a login page
   tokens (Web Crypto, so the proxy and route handlers share the code), constant
   time comparison and the `next` path validation.
 - `app/api/auth/login/route.ts` / `app/api/auth/logout/route.ts` – set/clear the
-  `studygap-session` cookie (HttpOnly, SameSite=Lax, 30 days).
+  `studygap-session` cookie (HttpOnly, SameSite=Lax, 30 days). The logout route
+  also calls the server `signOut` of Auth.js, so a Google session is deleted
+  from the `Session` table instead of being left behind for the proxy.
 - `components/logout-button.tsx` – "Abmelden / Đăng xuất" in the app header.
+  It clears the credentials cookie and then calls `signOut` from
+  `next-auth/react` (`redirectTo: '/<lang>/login'`), which removes the Auth.js
+  session and does a hard navigation back to the login page.
 
 ### Credentials
 

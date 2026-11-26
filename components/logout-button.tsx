@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useState } from "react";
 import { Spinner } from "@/components/spinner";
 import type { Locale } from "@/lib/locales";
@@ -32,27 +32,45 @@ function LogoutIcon() {
   );
 }
 
-/** Clears the session cookie and returns to the login page of the locale. */
+/**
+ * Signs the visitor out of both login backends and returns to the localized
+ * login page.
+ *
+ * - `signOut` from `next-auth/react` deletes the `Session` row of the Google
+ *   login, clears the `authjs.session-token` cookie and then performs a hard
+ *   navigation to `redirectTo`. Because the page is fully reloaded, the button
+ *   can never stay stuck in its pending state.
+ * - `POST /api/auth/logout` clears the older HMAC cookie written by the
+ *   credentials form (`lib/auth.ts`), which Auth.js knows nothing about.
+ */
 export function LogoutButton({
   lang,
   label,
   pendingLabel,
 }: LogoutButtonProps) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
+  const loginPath = `/${lang}/login`;
 
   async function handleLogout() {
     setPending(true);
 
+    // Clear the credentials cookie first: `signOut` navigates away, and nothing
+    // queued after that navigation is guaranteed to run.
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {
-      // The proxy rejects the session anyway once the cookie is gone; if the
-      // request failed the user lands on the login page and can retry.
+      // Network hiccup – the Auth.js sign-out below is the important part.
     }
 
-    router.replace(`/${lang}/login`);
-    router.refresh();
+    try {
+      // `redirectTo` is the Auth.js v5 name of `callbackUrl`.
+      await signOut({ redirectTo: loginPath });
+    } catch {
+      // Auth.js unreachable: re-enable the button so the user can retry instead
+      // of being stuck on a spinner. `/api/auth/logout` already cleared the
+      // session cookies, so the next navigation lands on the login page.
+      setPending(false);
+    }
   }
 
   return (
