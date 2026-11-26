@@ -18,9 +18,10 @@ the last selected language (falling back to Vietnamese).
 
 | Route                   | Description                                        |
 | ----------------------- | -------------------------------------------------- |
-| `/login`                | Login form (own root layout, not locale-prefixed)  |
-| `/`                     | Redirects to the preferred locale                  |
+| `/`                     | Redirects to the preferred locale (`/vi` by default) |
 | `/[lang]`               | Subject list (`de` or `vi`)                        |
+| `/[lang]/login`         | Login form (localized, centered card, no app header) |
+| `/login`                | Legacy URL: redirects to `/[lang]/login`           |
 | `/[lang]/subject/[id]`  | Learning path: chapters, progress, content and practice center |
 | `/[lang]/upload`        | Document upload (multi-file, calls the studygap-ai API) |
 | `POST /api/auth/login`  | Checks the credentials and stores the session cookie |
@@ -32,16 +33,22 @@ the last selected language (falling back to Vietnamese).
 
 Every page and API route is private. The proxy checks a signed, HTTP-only
 session cookie before rendering: visitors without a valid session are sent to
-`/login?next=<requested path>&lang=<locale>` (API requests get a `401` JSON
-response instead). After a successful login the form continues to `next`; the
-path is validated so `?next=` cannot leave the site.
+`/[lang]/login?next=<requested path>` (API requests get a `401` JSON response
+instead). After a successful login the form continues to `next`; the path is
+validated so `?next=` can neither leave the site nor point back at a login page
+(which would loop between the proxy and the form).
 
-- `app/(auth)/layout.tsx` – root layout of the login page (`<html>`/`<body>`,
-  no app header or footer). The route group keeps `/login` free of a locale
-  prefix and the app shell.
-- `app/(auth)/login/page.tsx` – login card. It reads `?lang=` (falling back to
-  the `studygap-lang` cookie) and renders the German or Vietnamese labels.
-- `app/(auth)/login/login-form.tsx` – client form that posts to the API.
+- `app/[lang]/layout.tsx` – root layout of every localized route: only the
+  document (`<html lang>`, `dir`, `<body>`), fonts and metadata.
+- `app/[lang]/(app)/layout.tsx` – shell of the private app: header with
+  navigation, language switcher and logout button, plus the footer.
+- `app/[lang]/(auth)/layout.tsx` – centered card shell of the login route, with
+  no app chrome. `(auth)` is a route group, so it does not appear in the URL:
+  the page is `/[lang]/login`.
+- `app/[lang]/(auth)/login/page.tsx` – login card. The language comes from the
+  URL segment (`/de/login`, `/vi/login`); the DE/VI pills link to the same page
+  in the other language and carry `?next=` over, rewriting its locale prefix.
+- `app/[lang]/(auth)/login/login-form.tsx` – client form that posts to the API.
 - `lib/auth.ts` – credentials from the environment, HMAC-SHA256 signed session
   tokens (Web Crypto, so the proxy and route handlers share the code), constant
   time comparison and the `next` path validation.
@@ -84,18 +91,20 @@ users or public sign-up, use an auth library instead.
 ## Internationalization
 
 - `lib/locales.ts` – supported locales (`de`, `vi`), the default locale (`vi`),
-  the cookie name, the text direction of every locale (`localeDirections`, both
-  LTR) and locale helpers. `<html>` is rendered with an explicit `lang` and
-  `dir` taken from this module, so the shell can never inherit an RTL direction
-  from the browser or an extension.
+  the cookie name, `localeDirection()` and locale helpers. The direction is
+  explicit: `rtl` only for right-to-left language codes (Hebrew, Arabic, …) and
+  `ltr` for everything else. `<html>` is rendered with an explicit `lang` and
+  `dir`, so the shell can never inherit an RTL direction from the browser or an
+  extension.
 - `lib/i18n.ts` – typed UI dictionaries for German and Vietnamese.
 - `lib/subjects.ts` – subject metadata (id, name, code, semester, summary) with localized names and
   summaries. Learning material now comes from the database.
-- `proxy.ts` – login gate for pages and API routes, redirects unprefixed paths
-  to the preferred locale, remembers the choice in the `studygap-lang` cookie,
-  and routes unknown subject slugs to the localized 404 page.
-- `app/[lang]/layout.tsx` – locale-aware `<html lang>`, navigation, language
-  switcher and the logout button.
+- `proxy.ts` – login gate for pages and API routes (public: `/*/login` and the
+  auth endpoints), redirects unprefixed paths to the preferred locale (including
+  the legacy `/login`), remembers the choice in the `studygap-lang` cookie, and
+  routes unknown subject slugs to the localized 404 page.
+- `app/[lang]/(app)/layout.tsx` – app header, navigation, language switcher and
+  the logout button for every page except the login form.
 - `app/global-not-found.tsx` – localized global 404 (needed because the root
   layout uses a top-level dynamic `[lang]` segment).
 

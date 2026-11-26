@@ -3,8 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Spinner } from "@/components/spinner";
+import type { Locale } from "@/lib/locales";
 
 type LogoutButtonProps = {
+  /** Locale of the login page the user is sent to after logging out. */
+  lang: Locale;
   label: string;
   pendingLabel: string;
 };
@@ -29,8 +32,12 @@ function LogoutIcon() {
   );
 }
 
-/** Clears the session cookie and returns to the login page. */
-export function LogoutButton({ label, pendingLabel }: LogoutButtonProps) {
+/** Clears the session cookie and returns to the login page of the locale. */
+export function LogoutButton({
+  lang,
+  label,
+  pendingLabel,
+}: LogoutButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -44,7 +51,7 @@ export function LogoutButton({ label, pendingLabel }: LogoutButtonProps) {
       // request failed the user lands on the login page and can retry.
     }
 
-    router.replace("/login");
+    router.replace(`/${lang}/login`);
     router.refresh();
   }
 

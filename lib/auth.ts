@@ -16,6 +16,8 @@
  * Server-only: never import this module from a `"use client"` file.
  */
 
+import { hasLocale } from "@/lib/locales";
+
 /** Cookie that stores the signed session. */
 export const sessionCookie = "studygap-session";
 
@@ -228,6 +230,17 @@ export async function areCredentialsValid(
   return usernameMatches && passwordMatches;
 }
 
+/** `true` for `/login` and `/de/login`-style paths (never a valid `next`). */
+function isLoginPath(pathname: string): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+
+  if (segments.length === 1) {
+    return segments[0] === "login";
+  }
+
+  return segments.length === 2 && hasLocale(segments[0]) && segments[1] === "login";
+}
+
 /**
  * Only same-origin paths are accepted as post-login destination, otherwise a
  * crafted `?next=` could redirect to another site.
@@ -246,7 +259,11 @@ export function safeRedirectPath(
     return "/";
   }
 
-  if (raw === "/login" || raw.startsWith("/login?") || raw.startsWith("/login#")) {
+  // A login page as destination would bounce between the proxy and the form,
+  // so `/login` and every `/<locale>/login` are rejected (query/hash ignored).
+  const [pathname] = raw.split(/[?#]/, 1);
+
+  if (isLoginPath(pathname)) {
     return "/";
   }
 

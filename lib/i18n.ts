@@ -188,7 +188,7 @@ export type Dictionary = {
     submit: string;
     uploading: string;
   };
-  /** Login page (`/login`), shared by both languages. */
+  /** Login page (`/[lang]/login`), rendered per locale. */
   login: {
     metaTitle: string;
     title: string;

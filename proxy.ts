@@ -29,17 +29,29 @@ function rememberLocale(response: NextResponse, locale: Locale): NextResponse {
   return response;
 }
 
-/** Sends unauthenticated visitors to `/login`, keeping their destination. */
+/** Sends unauthenticated visitors to the login page of their language. */
 function loginRedirect(
   request: NextRequest,
   locale: Locale,
   nextPath: string,
 ): NextResponse {
   const url = request.nextUrl.clone();
-  url.pathname = "/login";
-  url.search = new URLSearchParams({ next: nextPath, lang: locale }).toString();
+  url.pathname = `/${locale}/login`;
+  url.search = new URLSearchParams({ next: nextPath }).toString();
 
   return NextResponse.redirect(url);
+}
+
+/**
+ * Post-login destination. A missing or unsafe `?next=` falls back to the home
+ * page of the locale in the URL, so the user keeps their language.
+ */
+function postLoginDestination(request: NextRequest, locale: Locale): string {
+  const next = safeRedirectPath(
+    request.nextUrl.searchParams.get("next") ?? undefined,
+  );
+
+  return next === "/" ? `/${locale}` : next;
 }
 
 export async function proxy(request: NextRequest) {
@@ -59,43 +71,54 @@ export async function proxy(request: NextRequest) {
       : NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  if (pathname === "/login") {
-    // Language pills on the login page link to `/login?lang=de|vi`; remember the
-    // choice in the same cookie the locale redirect uses, so the app opens in
-    // that language after signing in. The page itself reads `?lang=` directly.
-    const requestedLocale = request.nextUrl.searchParams.get("lang");
-    const storedLocale = request.cookies.get(localeCookie)?.value;
-    const selectedLocale =
-      requestedLocale &&
-      hasLocale(requestedLocale) &&
-      requestedLocale !== storedLocale
-        ? requestedLocale
-        : null;
+  const segments = pathname.split("/").filter(Boolean);
+  const firstSegment = segments[0] ?? "";
+  const locale: Locale = hasLocale(firstSegment)
+    ? firstSegment
+    : getPreferredLocale(request);
 
-    // Already signed in: skip the form and continue to the original target.
-    if (sessionValid) {
-      const destination = request.nextUrl.searchParams.get("next") ?? undefined;
-      const target = new URL(
-        safeRedirectPath(destination),
-        request.nextUrl.origin,
-      );
-      const url = request.nextUrl.clone();
-      url.pathname = target.pathname;
-      url.search = target.search;
-      const response = NextResponse.redirect(url);
-      return selectedLocale ? rememberLocale(response, selectedLocale) : response;
-    }
+  // `/de/login` and `/vi/login` are the only public pages.
+  const isLoginPage =
+    hasLocale(firstSegment) && segments.length === 2 && segments[1] === "login";
 
-    const response = NextResponse.next();
-    return selectedLocale ? rememberLocale(response, selectedLocale) : response;
+  // Old bookmarks and the previous `?lang=` language pills point at the
+  // unprefixed `/login`; forward them to the localized login page instead of
+  // redirecting to the app (which would bounce back to the form).
+  if (
+    !hasLocale(firstSegment) &&
+    segments.length === 1 &&
+    segments[0] === "login"
+  ) {
+    const requested = request.nextUrl.searchParams.get("lang");
+    const target = requested && hasLocale(requested) ? requested : locale;
+    const next = request.nextUrl.searchParams.get("next");
+    const url = request.nextUrl.clone();
+    url.pathname = `/${target}/login`;
+    url.search = next ? new URLSearchParams({ next }).toString() : "";
+
+    return NextResponse.redirect(url);
   }
 
-  const firstSegment = pathname.split("/")[1] ?? "";
+  if (isLoginPage && hasLocale(firstSegment)) {
+    if (sessionValid) {
+      // Already signed in: skip the form and continue to the original target.
+      // `safeRedirectPath` rejects login paths, so this cannot loop.
+      const url = request.nextUrl.clone();
+      const target = new URL(
+        postLoginDestination(request, firstSegment),
+        request.nextUrl.origin,
+      );
+      url.pathname = target.pathname;
+      url.search = target.search;
+
+      return rememberLocale(NextResponse.redirect(url), firstSegment);
+    }
+
+    // Public page: only remember the language the visitor is looking at.
+    return rememberLocale(NextResponse.next(), firstSegment);
+  }
 
   if (!sessionValid) {
-    const locale = hasLocale(firstSegment)
-      ? firstSegment
-      : getPreferredLocale(request);
     const nextPath = hasLocale(firstSegment)
       ? `${pathname}${search}`
       : `/${locale}${pathname === "/" ? "" : pathname}${search}`;
@@ -133,7 +156,6 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect unprefixed paths (including "/") to the preferred language.
-  const locale = getPreferredLocale(request);
   const url = request.nextUrl.clone();
   url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
   return NextResponse.redirect(url);

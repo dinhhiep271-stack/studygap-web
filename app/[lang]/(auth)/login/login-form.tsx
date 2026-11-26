@@ -49,8 +49,9 @@ export function LoginForm({ next, labels }: LoginFormProps) {
       });
 
       if (response.ok) {
-        // `/login` and `/[lang]` use different root layouts, so this navigation
-        // reloads the document; the fresh session cookie is already stored.
+        // The login page and the app shell share the `[lang]` root layout, so
+        // this is a soft navigation; `refresh()` re-renders the server
+        // components with the fresh session cookie.
         router.replace(next);
         router.refresh();
         return;

@@ -13,18 +13,20 @@ export const localeNames: Record<Locale, string> = {
 };
 
 /**
- * Writing direction of every supported locale. Both languages are
- * left-to-right, but the direction is declared explicitly and rendered on
- * `<html dir>` so the layout never inherits an RTL direction from the browser,
- * an extension or a stale document.
+ * Languages written right-to-left. Everything else — including both supported
+ * locales (`de`, `vi`) — renders left-to-right, so `<html dir>` is always
+ * explicit and the layout can never inherit an RTL direction from the browser,
+ * an extension, auto-translation or a stale document.
  */
-export const localeDirections: Record<Locale, "ltr" | "rtl"> = {
-  de: "ltr",
-  vi: "ltr",
-};
+const rightToLeftLanguages = ["ar", "fa", "he", "ur"] as const;
 
-export function localeDirection(locale: Locale): "ltr" | "rtl" {
-  return localeDirections[locale] ?? "ltr";
+/** `"rtl"` only for Hebrew/Arabic/Persian/Urdu, `"ltr"` for everything else. */
+export function localeDirection(locale: string): "ltr" | "rtl" {
+  const language = locale.toLowerCase().split("-")[0];
+
+  return (rightToLeftLanguages as readonly string[]).includes(language)
+    ? "rtl"
+    : "ltr";
 }
 
 export function hasLocale(value: string): value is Locale {
