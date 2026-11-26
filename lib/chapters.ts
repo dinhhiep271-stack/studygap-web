@@ -43,8 +43,9 @@ export function chapterTitle(document: SubjectDocument): string {
 
 /**
  * Turns the documents loaded from Prisma into the ordered chapter list used by
- * the sidebar. The database already returns them oldest first; the index is
- * added here so the UI never has to derive it.
+ * the sidebar. `getSubjectDocuments` returns them ordered by file name (with a
+ * numeric-aware compare); the index is added here so the UI never has to
+ * derive it.
  */
 export function buildChapters(documents: SubjectDocument[]): SubjectChapter[] {
   return documents.map((document, index) => ({

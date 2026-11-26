@@ -47,10 +47,31 @@ function parseContent(content: string): ParsedCurriculum {
 }
 
 /**
- * Loads the documents stored for a subject (oldest first so the chapters follow
- * the order in which they were uploaded). Pass `language` to let the database
- * filter the locale the chapter is displayed in. A missing table is treated as
- * "no documents yet".
+ * Orders documents the way a human reads chapter file names. `numeric: true`
+ * makes embedded numbers sort by value, so "Kapitel_2" comes before
+ * "Kapitel_10" instead of landing after it. Upload time is the tie-breaker.
+ */
+function compareDocumentsByFileName(
+  a: { fileName: string; createdAt: Date },
+  b: { fileName: string; createdAt: Date },
+): number {
+  const byFileName = a.fileName.localeCompare(b.fileName, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+
+  if (byFileName !== 0) {
+    return byFileName;
+  }
+
+  return a.createdAt.getTime() - b.createdAt.getTime();
+}
+
+/**
+ * Loads the documents stored for a subject, ordered by file name (Kapitel 2
+ * before Kapitel 10) so the chapters follow the numbering the learner used when
+ * uploading. Pass `language` to let the database filter the locale the chapter
+ * is displayed in. A missing table is treated as "no documents yet".
  */
 export async function getSubjectDocuments(
   subjectId: string,
@@ -62,7 +83,9 @@ export async function getSubjectDocuments(
         subjectId,
         ...(options.language ? { language: options.language } : {}),
       },
-      orderBy: { createdAt: "asc" },
+      // Upload time keeps the query deterministic; the numeric file-name sort
+      // below is the order the sidebar actually shows.
+      orderBy: [{ createdAt: "asc" }, { fileName: "asc" }],
       select: {
         id: true,
         fileName: true,
@@ -75,7 +98,7 @@ export async function getSubjectDocuments(
       },
     });
 
-    return documents.map((document) => ({
+    return [...documents].sort(compareDocumentsByFileName).map((document) => ({
       id: document.id,
       fileName: document.fileName,
       title: document.title,
