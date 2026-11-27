@@ -7,6 +7,8 @@ import type {
   ParsedCurriculum,
   TableAnswer,
 } from "@/lib/curriculum";
+import { keyConceptsForLocale, summaryForLocale } from "@/lib/curriculum";
+import type { Locale } from "@/lib/locales";
 import { correctChoiceKeys, correctTruth } from "@/lib/practice";
 
 /**
@@ -326,12 +328,15 @@ function QuestionBody({
 export function CurriculumContent({
   curriculum,
   labels,
+  locale,
   showQuestions = true,
   conceptLabels,
   onConceptSelect,
 }: {
   curriculum: ParsedCurriculum;
   labels: CurriculumLabels;
+  /** Active UI language; selects `summary_de`/`summary_vi`, `concepts_de`/`concepts_vi`. */
+  locale: Locale;
   /** The subject workspace renders questions in the practice center instead. */
   showQuestions?: boolean;
   /** Captions for the clickable concept cards (subject page only). */
@@ -339,13 +344,18 @@ export function CurriculumContent({
   /** When set, key concepts become buttons that open the AI explainer. */
   onConceptSelect?: (concept: string) => void;
 }) {
+  // Bilingual teaching: pick the active language so a DE ↔ VI switch updates the
+  // section immediately. Legacy documents fall back to their single-language text.
+  const summary = summaryForLocale(curriculum, locale);
+  const keyConcepts = keyConceptsForLocale(curriculum, locale);
+
   return (
     <>
       <Section title={labels.summary}>
-        {curriculum.summary ? (
+        {summary ? (
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-5 py-4">
             <p className="text-sm leading-7 whitespace-pre-line text-zinc-700">
-              {curriculum.summary}
+              {summary}
             </p>
           </div>
         ) : (
@@ -355,15 +365,11 @@ export function CurriculumContent({
 
       <Section
         title={labels.concepts}
-        count={
-          curriculum.keyConcepts.length > 0
-            ? curriculum.keyConcepts.length
-            : undefined
-        }
+        count={keyConcepts.length > 0 ? keyConcepts.length : undefined}
       >
-        {curriculum.keyConcepts.length > 0 ? (
+        {keyConcepts.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2">
-            {curriculum.keyConcepts.map((concept, index) => {
+            {keyConcepts.map((concept, index) => {
               // On the subject page the cards open the AI explainer; the upload
               // preview keeps them read-only because it has no API context.
               const interactive = conceptLabels && onConceptSelect;

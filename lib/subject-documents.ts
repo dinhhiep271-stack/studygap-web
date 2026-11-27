@@ -1,4 +1,9 @@
-import { parseCurriculum, type ParsedCurriculum } from "@/lib/curriculum";
+import {
+  hasCurriculumLocale,
+  parseCurriculum,
+  type ParsedCurriculum,
+} from "@/lib/curriculum";
+import type { Locale } from "@/lib/locales";
 import { prisma } from "@/lib/prisma";
 
 /** A stored document plus the parsed curriculum, ready for the subject page. */
@@ -72,20 +77,19 @@ function compareDocumentsByFileName(
 /**
  * Loads the documents stored for a subject **of one user**, ordered by file name
  * (Kapitel 2 before Kapitel 10) so the chapters follow the numbering the learner
- * used when uploading. Pass `language` to let the database filter the locale the
- * chapter is displayed in. A missing table is treated as "no documents yet".
+ * used when uploading. Bilingual teaching is usable in both locales, so the
+ * subject page and the exam route load every document and filter with
+ * `documentsForLocale`. A missing table is treated as "no documents yet".
  */
 export async function getSubjectDocuments(
   userId: string,
   subjectId: string,
-  options: { language?: string } = {},
 ): Promise<SubjectDocument[]> {
   try {
     const documents = await prisma.document.findMany({
       where: {
         userId,
         subjectId,
-        ...(options.language ? { language: options.language } : {}),
       },
       // Upload time keeps the query deterministic; the numeric file-name sort
       // below is the order the sidebar actually shows.
@@ -121,23 +125,22 @@ export async function getSubjectDocuments(
   }
 }
 
-/** Number of stored documents of one user that were generated in another language. */
-export async function countOtherLanguageDocuments(
-  userId: string,
-  subjectId: string,
-  language: string,
-): Promise<number> {
-  try {
-    return await prisma.document.count({
-      where: { userId, subjectId, NOT: { language } },
-    });
-  } catch (error) {
-    console.error(
-      `Could not count documents for subject "${subjectId}". Run "npm run db:push" to create the tables.`,
-      error,
-    );
-    return 0;
-  }
+/**
+ * Documents that can be shown in `locale`: either the AI generated them in that
+ * language (`document.language`), or the teaching is bilingual
+ * (`summary_de` / `summary_vi`, `concepts_de` / `concepts_vi`), so the same
+ * chapter is readable after switching DE ↔ VI. This filters in memory because the
+ * parsed curriculum, not a database column, carries the translations.
+ */
+export function documentsForLocale(
+  documents: SubjectDocument[],
+  locale: Locale,
+): SubjectDocument[] {
+  return documents.filter(
+    (document) =>
+      document.language === locale ||
+      hasCurriculumLocale(document.curriculum, locale),
+  );
 }
 
 /**

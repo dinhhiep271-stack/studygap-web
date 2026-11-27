@@ -1,9 +1,17 @@
+import type { Locale } from "@/lib/locales";
+
 /**
  * Optional fields are read defensively: the AI service returns JSON in the
  * `teaching` / `questions` shape described in its SYSTEM_PROMPT, but a model can
  * still omit a key or answer with an unexpected type. Parsing here keeps the UI
  * components free of `unknown` handling.
  */
+
+/** The same text in both course languages (`de` = German, `vi` = Vietnamese). */
+export type BilingualText = {
+  de: string;
+  vi: string;
+};
 
 export type CurriculumQuestionType =
   | "multiple_choice"
@@ -72,8 +80,18 @@ export type CurriculumQuestion = {
 
 export type ParsedCurriculum = {
   title: string;
+  /** Summary in the upload language; legacy documents only carry this field. */
   summary: string;
+  /** `teaching.summary_de` – empty for documents stored before the bilingual contract. */
+  summaryDe: string;
+  /** `teaching.summary_vi` – empty for documents stored before the bilingual contract. */
+  summaryVi: string;
+  /** Key concepts in the upload language; legacy documents only carry this field. */
   keyConcepts: KeyConcept[];
+  /** `teaching.concepts_de` – empty for documents stored before the bilingual contract. */
+  conceptsDe: KeyConcept[];
+  /** `teaching.concepts_vi` – empty for documents stored before the bilingual contract. */
+  conceptsVi: KeyConcept[];
   formulas: Formula[];
   examples: WorkedExample[];
   questions: CurriculumQuestion[];
@@ -469,9 +487,54 @@ export function parseCurriculum(value: unknown): ParsedCurriculum {
   return {
     title: readText(record.title),
     summary: readText(teaching.summary) || readText(record.summary),
+    summaryDe: readText(teaching.summary_de),
+    summaryVi: readText(teaching.summary_vi),
     keyConcepts: readKeyConcepts(teaching.key_concepts),
+    conceptsDe: readKeyConcepts(teaching.concepts_de),
+    conceptsVi: readKeyConcepts(teaching.concepts_vi),
     formulas: readFormulas(teaching.formulas),
     examples: readExamples(teaching.examples),
     questions: readQuestions(record.questions),
   };
+}
+
+/**
+ * Summary in the active UI locale. Documents stored before the API returned
+ * `summary_de` / `summary_vi` only have `summary`, which is used as a fallback.
+ */
+export function summaryForLocale(
+  curriculum: ParsedCurriculum,
+  locale: Locale,
+): string {
+  return locale === "de"
+    ? curriculum.summaryDe || curriculum.summary
+    : curriculum.summaryVi || curriculum.summary;
+}
+
+/**
+ * Key concepts in the active UI locale. The legacy `key_concepts` array is the
+ * fallback for documents uploaded before the bilingual contract.
+ */
+export function keyConceptsForLocale(
+  curriculum: ParsedCurriculum,
+  locale: Locale,
+): KeyConcept[] {
+  const concepts =
+    locale === "de" ? curriculum.conceptsDe : curriculum.conceptsVi;
+
+  return concepts.length > 0 ? concepts : curriculum.keyConcepts;
+}
+
+/**
+ * True when the document carries bilingual teaching for `locale`
+ * (`summary_de` / `summary_vi` or `concepts_de` / `concepts_vi`). Legacy
+ * documents only match the language they were generated in.
+ */
+export function hasCurriculumLocale(
+  curriculum: ParsedCurriculum,
+  locale: Locale,
+): boolean {
+  return locale === "de"
+    ? Boolean(curriculum.summaryDe) || curriculum.conceptsDe.length > 0
+    : Boolean(curriculum.summaryVi) || curriculum.conceptsVi.length > 0;
 }

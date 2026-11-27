@@ -764,6 +764,7 @@ export function UploadForm({
                 error={outcome.error}
                 warning={outcome.warning}
                 result={outcome.result}
+                locale={lang}
                 dict={dict}
               />
             ))}

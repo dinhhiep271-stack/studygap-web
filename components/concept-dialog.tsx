@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/spinner";
 import {
   conceptSectionKeys,
+  conceptSectionNames,
   type ConceptErrorCode,
   type ConceptExplanation,
   type ConceptLabels,
@@ -13,6 +14,7 @@ import {
   ConceptRequestError,
   fetchConceptExplanation,
 } from "@/lib/concept-client";
+import { localeNames, type Locale } from "@/lib/locales";
 
 /**
  * AI explainer dialog for the key concepts of a chapter.
@@ -57,7 +59,7 @@ export function ConceptDialog({
 }: {
   /** Concept name to explain; `null` keeps the dialog closed. */
   concept: string | null;
-  lang: string;
+  lang: Locale;
   labels: ConceptLabels;
   /** Related chapter material forwarded to the AI as grounding context. */
   context?: string;
@@ -279,9 +281,15 @@ export function ConceptDialog({
             </div>
           ) : explanation ? (
             <div className="space-y-3">
+              <p className="rounded-lg border border-zinc-100 bg-zinc-50 px-3.5 py-2.5 text-xs leading-5 text-zinc-500">
+                {labels.bilingualHint}
+              </p>
+
               {conceptSectionKeys.map((key, index) => {
                 const style = sectionStyles[key];
                 const content = explanation[key];
+                const hasGerman = content.de.length > 0;
+                const hasVietnamese = content.vi.length > 0;
 
                 return (
                   <section
@@ -301,14 +309,51 @@ export function ConceptDialog({
                       >
                         {labels.sections[key]}
                       </h3>
+                      <span
+                        aria-hidden="true"
+                        className="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-zinc-500 uppercase ring-1 ring-white/60"
+                      >
+                        DE · VI
+                      </span>
                     </div>
-                    <p
-                      className={`mt-2 text-sm leading-7 whitespace-pre-line ${
-                        content ? "text-zinc-700" : "text-zinc-500 italic"
-                      }`}
-                    >
-                      {content || labels.emptySection}
-                    </p>
+
+                    <div className="mt-2.5 space-y-2.5">
+                      <div>
+                        <p
+                          lang="de"
+                          className="text-[11px] font-bold tracking-wide text-zinc-700 uppercase"
+                        >
+                          {localeNames.de} · {conceptSectionNames.de[key]}
+                        </p>
+                        <p
+                          lang="de"
+                          className={`mt-0.5 text-sm leading-7 whitespace-pre-line ${
+                            hasGerman
+                              ? "font-medium text-zinc-800"
+                              : "text-zinc-500 italic"
+                          }`}
+                        >
+                          {hasGerman ? content.de : labels.emptySection}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg bg-white/70 px-3 py-2.5 ring-1 ring-white/70">
+                        <p
+                          lang="vi"
+                          className="text-[11px] font-semibold tracking-wide text-zinc-500 uppercase italic"
+                        >
+                          {localeNames.vi} · {conceptSectionNames.vi[key]}
+                        </p>
+                        <p
+                          lang="vi"
+                          className={`mt-0.5 text-sm leading-7 whitespace-pre-line italic ${
+                            hasVietnamese ? "text-zinc-600" : "text-zinc-400"
+                          }`}
+                        >
+                          {hasVietnamese ? content.vi : labels.emptySection}
+                        </p>
+                      </div>
+                    </div>
                   </section>
                 );
               })}

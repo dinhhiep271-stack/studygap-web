@@ -17,7 +17,10 @@ import {
   type ExamContextChapter,
 } from "@/lib/exam-service";
 import { defaultLocale, hasLocale } from "@/lib/locales";
-import { getSubjectDocuments } from "@/lib/subject-documents";
+import {
+  documentsForLocale,
+  getSubjectDocuments,
+} from "@/lib/subject-documents";
 import { getSubject } from "@/lib/subjects";
 
 /**
@@ -93,9 +96,12 @@ export async function POST(request: Request) {
       : Number.NaN,
   );
 
-  // Only the signed-in user's material may be used to build a paper.
+  // Only the signed-in user's material may be used to build a paper. Bilingual
+  // chapters are valid for both locales, legacy ones only for their upload
+  // language.
   const userId = await getCurrentUserId();
-  const documents = await getSubjectDocuments(userId, subjectId, { language });
+  const storedDocuments = await getSubjectDocuments(userId, subjectId);
+  const documents = documentsForLocale(storedDocuments, language);
 
   if (documents.length === 0) {
     return badRequest("no-material");
@@ -121,7 +127,7 @@ export async function POST(request: Request) {
     scopeChapters = [chapter];
   }
 
-  const context = buildExamContext(scopeChapters, kind);
+  const context = buildExamContext(scopeChapters, kind, language);
 
   if (!context.trim()) {
     return badRequest("no-material");

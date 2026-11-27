@@ -1,6 +1,10 @@
 import { normalizeApiBaseUrl } from "@/lib/api-url";
 import type { CurriculumQuestion, ParsedCurriculum } from "@/lib/curriculum";
-import { parseQuestions } from "@/lib/curriculum";
+import {
+  keyConceptsForLocale,
+  parseQuestions,
+  summaryForLocale,
+} from "@/lib/curriculum";
 import {
   clampQuestionCount,
   isExamKind,
@@ -9,6 +13,7 @@ import {
   type ExamKind,
   type GeneratedExam,
 } from "@/lib/exam";
+import type { Locale } from "@/lib/locales";
 import { isPracticeReady, normalizeText } from "@/lib/practice";
 import { prisma } from "@/lib/prisma";
 
@@ -67,17 +72,23 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-function chapterBlock(chapter: ExamContextChapter, limit: number) {
+function chapterBlock(
+  chapter: ExamContextChapter,
+  limit: number,
+  locale: Locale,
+) {
   const { curriculum } = chapter;
+  const summary = summaryForLocale(curriculum, locale);
+  const keyConcepts = keyConceptsForLocale(curriculum, locale);
   const lines = [`### CHƯƠNG: ${chapter.title}`];
 
-  if (curriculum.summary) {
-    lines.push(`Tóm tắt: ${curriculum.summary}`);
+  if (summary) {
+    lines.push(`Tóm tắt: ${summary}`);
   }
 
-  if (curriculum.keyConcepts.length > 0) {
+  if (keyConcepts.length > 0) {
     lines.push(
-      `Khái niệm chính: ${curriculum.keyConcepts
+      `Khái niệm chính: ${keyConcepts
         .slice(0, 12)
         .map((concept) =>
           concept.explanation
@@ -125,6 +136,7 @@ function chapterBlock(chapter: ExamContextChapter, limit: number) {
 export function buildExamContext(
   chapters: ExamContextChapter[],
   kind: ExamKind,
+  locale: Locale,
 ): string {
   const ordered = kind === "final" ? shuffle(chapters) : chapters;
   const perChapter = Math.max(
@@ -133,7 +145,7 @@ export function buildExamContext(
   );
 
   return ordered
-    .map((chapter) => chapterBlock(chapter, perChapter))
+    .map((chapter) => chapterBlock(chapter, perChapter, locale))
     .join("\n\n")
     .slice(0, MAX_CONTEXT_CHARS);
 }
@@ -171,7 +183,7 @@ export async function generateExamQuestions({
   context: string;
   kind: ExamKind;
   count: number;
-  lang: string;
+  lang: Locale;
   chapterTitles: string[];
   existingQuestions: string[];
 }): Promise<{ questions: CurriculumQuestion[] }> {

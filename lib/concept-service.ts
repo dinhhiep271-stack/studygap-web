@@ -4,6 +4,7 @@ import {
   type ConceptErrorCode,
   type ConceptExplanation,
 } from "@/lib/concept";
+import type { Locale } from "@/lib/locales";
 
 /**
  * Server-only helper for the AI concept explainer (`POST /explain-concept`).
@@ -42,7 +43,11 @@ type ExplainResponse = {
   error?: string;
 };
 
-/** Calls the FastAPI service; all failures become `ConceptExplanationError`. */
+/**
+ * Calls the FastAPI service. `lang` only selects the language of the request
+ * (and of legacy single-language answers); current responses carry both
+ * languages in every section. All failures become `ConceptExplanationError`.
+ */
 export async function explainConcept({
   concept,
   context = "",
@@ -51,7 +56,7 @@ export async function explainConcept({
   concept: string;
   /** Related chapter material the model may ground the explanation on. */
   context?: string;
-  lang: string;
+  lang: Locale;
 }): Promise<ConceptExplanation> {
   let response: Response;
 
@@ -84,7 +89,7 @@ export async function explainConcept({
     );
   }
 
-  const explanation = parseConceptExplanation(payload, concept);
+  const explanation = parseConceptExplanation(payload, concept, lang);
 
   if (!explanation) {
     throw new ConceptExplanationError("empty");

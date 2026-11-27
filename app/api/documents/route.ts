@@ -29,7 +29,11 @@ function badRequest(error: string) {
 function hasContent(curriculum: ParsedCurriculum) {
   return (
     Boolean(curriculum.summary) ||
+    Boolean(curriculum.summaryDe) ||
+    Boolean(curriculum.summaryVi) ||
     curriculum.keyConcepts.length > 0 ||
+    curriculum.conceptsDe.length > 0 ||
+    curriculum.conceptsVi.length > 0 ||
     curriculum.formulas.length > 0 ||
     curriculum.examples.length > 0 ||
     curriculum.questions.length > 0

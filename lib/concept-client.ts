@@ -4,6 +4,7 @@ import {
   type ConceptErrorCode,
   type ConceptExplanation,
 } from "@/lib/concept";
+import type { Locale } from "@/lib/locales";
 
 /**
  * Client helper for `POST /api/concepts` (concept cards on the subject page).
@@ -27,7 +28,7 @@ export async function fetchConceptExplanation(
     concept,
     lang,
     context,
-  }: { concept: string; lang: string; context?: string },
+  }: { concept: string; lang: Locale; context?: string },
   signal?: AbortSignal,
 ): Promise<ConceptExplanation> {
   let response: Response;
@@ -61,7 +62,11 @@ export async function fetchConceptExplanation(
     );
   }
 
-  const explanation = parseConceptExplanation(payload?.explanation, concept);
+  const explanation = parseConceptExplanation(
+    payload?.explanation,
+    concept,
+    lang,
+  );
 
   if (!explanation) {
     throw new ConceptRequestError("empty");

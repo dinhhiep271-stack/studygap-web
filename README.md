@@ -183,8 +183,11 @@ read the chapter content (summary, key concepts, formulas, examples) and open
 the practice center, which offers one tab per exercise format: single choice,
 multiple response, calculation, fill-in-the-blank/Stichwort, true/false and
 fill-in-the-table. Each task has a check button that reveals the correct answer
-and the explanation. Content in the other language is not mixed in; a hint is
-shown instead. Chapter, tab and practice format can be deep-linked with
+and the explanation. Teaching is bilingual: `summary_de`/`summary_vi` and
+`concepts_de`/`concepts_vi` are selected by the active locale, so switching
+DE ↔ VI re-renders the chapter instantly. Documents stored before that contract
+only appear in the language they were generated in; a hint counts the hidden
+rows. Chapter, tab and practice format can be deep-linked with
 `?chapter=<document id>&tab=practice&format=<format>`.
 
 The subject page also works as an exam center:
@@ -209,16 +212,20 @@ Every key concept in the chapter content is a button ("Begriff erklären / Giả
 thích khái niệm"). Clicking it calls `POST /api/concepts` with the concept name
 and the current chapter summary/formulas as `context`, shows a loading state and
 then the answer in a modal with the four sections Definition, Erklärung,
-Zusammenhang and Kritik. Failures show a friendly, localized message with a
-retry button; Escape, the backdrop and the close button dismiss the dialog and
-return focus to the card.
+Zusammenhang and Kritik. `/explain-concept` returns every section as
+`{ de, vi }`, and the modal renders both: German in bold at the top, the
+Vietnamese translation in italic/muted below, with a native caption per
+language. Failures show a friendly, localized message with a retry button;
+Escape, the backdrop and the close button dismiss the dialog and return focus to
+the card.
 
 The AI service receives the UI locale as the optional multipart field `lang`
-(`de` / `vi`) and is instructed to write the curriculum in that language, so a
-German upload produces German content and a Vietnamese upload Vietnamese. Its
-JSON contract contains `teaching` (summary, key concepts, formulas, examples)
-and 10 `questions` covering the practice formats, so every practice tab has
-material for a fresh upload.
+(`de` / `vi`). Its JSON contract contains `teaching` with bilingual summaries and
+key concepts (`summary_de` / `summary_vi`, `concepts_de` / `concepts_vi`) next to
+the legacy `summary` / `key_concepts` for the upload language, plus formulas and
+examples, and 10 `questions` covering the practice formats, so every practice tab
+has material for a fresh upload. Documents without the bilingual keys (stored
+before this contract) stay visible in their upload language only.
 
 ## Scripts
 

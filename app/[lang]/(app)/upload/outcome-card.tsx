@@ -2,7 +2,11 @@ import { CurriculumContent } from "@/components/curriculum-sections";
 import { FileTypeBadge } from "@/components/file-type-badge";
 import { stripDocumentExtension } from "@/lib/file-formats";
 import type { Dictionary } from "@/lib/i18n";
-import type { ParsedCurriculum } from "@/lib/curriculum";
+import {
+  keyConceptsForLocale,
+  type ParsedCurriculum,
+} from "@/lib/curriculum";
+import type { Locale } from "@/lib/locales";
 
 export type OutcomeCardProps = {
   fileName: string;
@@ -13,6 +17,8 @@ export type OutcomeCardProps = {
   /** Non-fatal problem, e.g. the result could not be stored in the database. */
   warning?: string;
   result?: ParsedCurriculum;
+  /** Upload language: the preview shows the summary/concepts in this language. */
+  locale: Locale;
   dict: Dictionary;
 };
 
@@ -37,10 +43,12 @@ export function OutcomeCard({
   error,
   warning,
   result,
+  locale,
   dict,
 }: OutcomeCardProps) {
   const upload = dict.upload;
   const labels = dict.curriculum;
+  const conceptCount = result ? keyConceptsForLocale(result, locale).length : 0;
 
   const metaChips = result
     ? [
@@ -53,10 +61,10 @@ export function OutcomeCard({
               value: String(result.questions.length),
             }
           : null,
-        result.keyConcepts.length > 0
+        conceptCount > 0
           ? {
               label: labels.concepts,
-              value: String(result.keyConcepts.length),
+              value: String(conceptCount),
             }
           : null,
         result.formulas.length > 0
@@ -131,7 +139,11 @@ export function OutcomeCard({
             ) : null}
           </div>
 
-          <CurriculumContent curriculum={result} labels={labels} />
+          <CurriculumContent
+            curriculum={result}
+            labels={labels}
+            locale={locale}
+          />
 
           {truncated ? (
             <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">

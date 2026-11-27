@@ -308,6 +308,8 @@ const de: Dictionary = {
   concept: {
     action: "Begriff erklären",
     dialogEyebrow: "KI-Erklärung",
+    bilingualHint:
+      "Zweisprachige Antwort: Deutsch fett oben, vietnamesische Übersetzung kursiv darunter.",
     loading: "Der Begriff wird analysiert …",
     loadingHint:
       "Die KI liest den Begriff im Kontext dieses Kapitels und erstellt Definition, Erklärung, Zusammenhang und Kritik.",
@@ -613,6 +615,8 @@ const vi: Dictionary = {
   concept: {
     action: "Giải thích khái niệm",
     dialogEyebrow: "AI giải thích",
+    bilingualHint:
+      "Giải thích song ngữ: tiếng Đức in đậm ở trên, bản dịch tiếng Việt in nghiêng bên dưới.",
     loading: "Đang phân tích khái niệm …",
     loadingHint:
       "AI đọc khái niệm trong ngữ cảnh của chương này và tạo định nghĩa, giải thích, liên hệ và phản biện.",

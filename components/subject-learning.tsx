@@ -7,7 +7,7 @@ import { CurriculumContent } from "@/components/curriculum-sections";
 import { ExamRunner } from "@/components/exam-runner";
 import { FinalExamPanel } from "@/components/final-exam-panel";
 import { PracticeCenter } from "@/components/practice-center";
-import type { ParsedCurriculum } from "@/lib/curriculum";
+import { summaryForLocale, type ParsedCurriculum } from "@/lib/curriculum";
 import type { GeneratedExam } from "@/lib/exam";
 import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/locales";
@@ -98,7 +98,7 @@ export function SubjectLearning({
   // Grounding text for the AI explainer: only the current chapter, so a model
   // answer stays close to the material the learner is looking at.
   const conceptContext = [
-    activeChapter.curriculum.summary,
+    summaryForLocale(activeChapter.curriculum, lang),
     ...activeChapter.curriculum.formulas.map((formula) =>
       [formula.formula, formula.description].filter(Boolean).join(" – "),
     ),
@@ -442,6 +442,7 @@ export function SubjectLearning({
                 <CurriculumContent
                   curriculum={activeChapter.curriculum}
                   labels={dict.curriculum}
+                  locale={lang}
                   showQuestions={false}
                   conceptLabels={dict.concept}
                   onConceptSelect={setActiveConcept}

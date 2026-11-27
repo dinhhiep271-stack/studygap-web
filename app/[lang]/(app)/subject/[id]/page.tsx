@@ -13,7 +13,7 @@ import { getDictionary } from "@/lib/i18n";
 import { hasLocale, otherLocale } from "@/lib/locales";
 import { isPracticeFormat } from "@/lib/practice";
 import {
-  countOtherLanguageDocuments,
+  documentsForLocale,
   getSubjectDocuments,
 } from "@/lib/subject-documents";
 import { getSubject } from "@/lib/subjects";
@@ -105,17 +105,21 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
   const uploadHref = `/${lang}/upload?subject=${subject.id}`;
   const dateFormatter = new Intl.DateTimeFormat(lang, { dateStyle: "medium" });
 
-  // Bilingual content: only documents generated in the active language are
-  // loaded; material in the other language would otherwise appear untranslated.
-  // Every query is scoped to the signed-in user, so two accounts never share
-  // chapters, language hints or stored exams.
+  // Teaching is bilingual (`summary_de`/`summary_vi`,
+  // `concepts_de`/`concepts_vi`), so every document that carries the active
+  // locale is shown – regardless of the language selected at upload time.
+  // Legacy documents (single-language teaching) stay limited to the language
+  // they were generated in; the hint below counts those hidden rows. Every query
+  // is scoped to the signed-in user, so two accounts never share chapters,
+  // language hints or stored exams.
   const userId = await getCurrentUserId();
   const requestedExamId = firstValue(query.exam);
-  const [documents, otherLanguageCount, storedExam] = await Promise.all([
-    getSubjectDocuments(userId, id, { language: lang }),
-    countOtherLanguageDocuments(userId, id, lang),
+  const [storedDocuments, storedExam] = await Promise.all([
+    getSubjectDocuments(userId, id),
     requestedExamId ? getExam(userId, requestedExamId) : Promise.resolve(null),
   ]);
+  const documents = documentsForLocale(storedDocuments, lang);
+  const otherLanguageCount = storedDocuments.length - documents.length;
 
   // Deep link `?exam=<id>`: only a paper of this subject in this language is
   // resumed, otherwise the page falls back to the chapter workspace.
