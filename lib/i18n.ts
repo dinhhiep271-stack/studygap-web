@@ -177,6 +177,8 @@ export type Dictionary = {
     processingHint: string;
     processingTitle: string;
     waitingForAi: string;
+    queueWaiting: string;
+    fileProgressLabel: string;
     saving: string;
     redirecting: string;
     resultHeading: string;
@@ -187,6 +189,10 @@ export type Dictionary = {
     resultFailedBadge: string;
     resultFailedHint: string;
     resultTruncatedNote: string;
+    chapterSavedBadge: string;
+    chapterListHeading: string;
+    chapterListHint: string;
+    openSubjectPage: string;
     cancel: string;
     submit: string;
     uploading: string;
@@ -479,9 +485,11 @@ const de: Dictionary = {
       save: "Das Ergebnis konnte nicht in der Datenbank gespeichert werden. Bitte versuche es erneut.",
     },
     processingHint:
-      "Die Auswertung durch das Sprachmodell kann einige Minuten dauern.",
+      "Die Dateien werden nacheinander ausgewertet; jede fertige Datei wird sofort als eigenes Kapitel gespeichert.",
     processingTitle: "Die KI verarbeitet deine Dokumente",
     waitingForAi: "Wartet auf die KI …",
+    queueWaiting: "Wartet in der Warteschlange …",
+    fileProgressLabel: "Datei",
     saving: "Ergebnis wird gespeichert …",
     redirecting: "Fachseite wird geöffnet …",
     resultHeading: "Auswertung der Dokumente",
@@ -493,6 +501,10 @@ const de: Dictionary = {
     resultFailedHint: "Diese Datei konnte nicht ausgewertet werden.",
     resultTruncatedNote:
       "Das Dokument ist sehr lang. Die KI hat nur den ersten Teil ausgewertet.",
+    chapterSavedBadge: "Gespeichert",
+    chapterListHeading: "Kapitel aus diesem Upload",
+    chapterListHint: "Jede Datei wird als eigenes Kapitel gespeichert.",
+    openSubjectPage: "Fachseite öffnen",
     cancel: "Abbrechen",
     submit: "Hochladen",
     uploading: "Dokumente werden verarbeitet …",
@@ -780,9 +792,11 @@ const vi: Dictionary = {
       save: "Không thể lưu kết quả vào cơ sở dữ liệu. Vui lòng thử lại.",
     },
     processingHint:
-      "Quá trình phân tích bằng mô hình ngôn ngữ có thể mất vài phút.",
+      "Các tệp được xử lý lần lượt; mỗi tệp hoàn tất được lưu ngay thành một chương riêng.",
     processingTitle: "AI đang xử lý tài liệu của bạn",
     waitingForAi: "Đang chờ AI trả kết quả...",
+    queueWaiting: "Đang chờ trong hàng đợi...",
+    fileProgressLabel: "Tệp",
     saving: "Đang lưu kết quả...",
     redirecting: "Đang mở trang môn học...",
     resultHeading: "Kết quả xử lý tài liệu",
@@ -794,6 +808,10 @@ const vi: Dictionary = {
     resultFailedHint: "Không thể xử lý tệp này.",
     resultTruncatedNote:
       "Tài liệu quá dài nên AI chỉ phân tích phần đầu của tài liệu.",
+    chapterSavedBadge: "Đã lưu",
+    chapterListHeading: "Các chương từ lần tải lên này",
+    chapterListHint: "Mỗi tệp được lưu thành một chương riêng.",
+    openSubjectPage: "Mở trang môn học",
     cancel: "Hủy",
     submit: "Tải lên",
     uploading: "Đang xử lý tài liệu...",

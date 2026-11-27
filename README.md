@@ -174,10 +174,16 @@ the page count, whether the AI input was truncated and a `title` used as the
 chapter name (the AI title, falling back to a readable file name). Every stored
 PDF is one chapter of the subject's learning path.
 
-The upload page posts every successful result to `POST /api/documents`
-(`{ subjectId, fileName, language, pages?, truncated?, curriculum }`), then
-redirects to `/[lang]/subject/[id]`. The subject page lets the learner switch
-between chapters in the sidebar, tick chapters as learned (progress is stored
+The upload page sends the selected files one at a time to
+`POST /process-document` (sequential, so long batches do not hit one big request
+timeout and the UI can follow every file). As soon as a file's result arrives it
+is stored through `POST /api/documents`
+(`{ subjectId, fileName, language, pages?, truncated?, curriculum }`) – one
+`Document` row, i.e. one chapter, per file. The result view lists the new
+chapters as they are stored (each entry deep-links to its chapter) and redirects
+to `/[lang]/subject/[id]?chapter=<first new document>` once every file was
+saved. The subject page lets the learner switch between chapters in the sidebar,
+tick chapters as learned (progress is stored
 per browser in `localStorage`, key `studygap:subject-progress:<subjectId>`),
 read the chapter content (summary, key concepts, formulas, examples) and open
 the practice center, which offers one tab per exercise format: single choice,
