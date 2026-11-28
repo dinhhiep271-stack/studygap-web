@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/spinner";
 import {
+  conceptSectionHeading,
   conceptSectionTitle,
   type ConceptCategory,
   type ConceptErrorCode,
@@ -325,22 +326,24 @@ export function ConceptDialog({
               {explanation.sections.map((section, index) => {
                 const style = sectionPalette[index % sectionPalette.length];
                 const title = conceptSectionTitle(section.key);
-                // Known keys have a German and a Vietnamese caption; unknown
-                // keys fall back to the same humanised label for both.
-                const heading =
-                  title.de === title.vi
-                    ? title.de
-                    : `${title.de} / ${title.vi}`;
+                // The card heading is the raw JSON key in upper case
+                // (`symptome` → `SYMPTOME`); the German caption stays identical
+                // to the key, so the key doubles as the German title.
+                const heading = conceptSectionHeading(section.key);
                 const hasGerman = section.de.length > 0;
                 const hasVietnamese = section.vi.length > 0;
 
                 return (
                   <section
                     key={`${section.key}-${index}`}
-                    aria-label={heading}
+                    aria-label={
+                      title.de === title.vi
+                        ? heading
+                        : `${heading} / ${title.vi}`
+                    }
                     className={`rounded-xl border px-4 py-3.5 ${style.card}`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span
                         aria-hidden="true"
                         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${style.badge}`}
@@ -352,6 +355,11 @@ export function ConceptDialog({
                       >
                         {heading}
                       </h3>
+                      {title.vi !== title.de ? (
+                        <span className="text-[11px] font-medium text-zinc-500">
+                          {title.vi}
+                        </span>
+                      ) : null}
                       <span
                         aria-hidden="true"
                         className="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-zinc-500 uppercase ring-1 ring-white/60"
@@ -372,7 +380,7 @@ export function ConceptDialog({
                           lang="de"
                           className={`mt-0.5 text-sm leading-7 whitespace-pre-line ${
                             hasGerman
-                              ? "font-medium text-zinc-800"
+                              ? "font-normal text-zinc-800"
                               : "text-zinc-500 italic"
                           }`}
                         >

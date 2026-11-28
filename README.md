@@ -224,18 +224,21 @@ and then the answer in a modal. The modal does not hardcode its sections: it
 iterates over the keys the AI returned (`definition`, `erklaerung`, ... for
 general subjects, and the ten medical sections `definition`, `symptome`,
 `diagnostik`, `differentialdiagnosen`, `therapie`, `medikamente`, `prophylaxe`,
-`pflegeplanung`, `komplikationen`, `prognose`) and labels each with its
-bilingual title, e.g. `symptome` → "Symptome / Triệu chứng",
-`differentialdiagnosen` → "Differentialdiagnosen / Chẩn đoán phân biệt". The
-medical contract is completed from `conceptCategorySections`, so all ten
-sections always appear in care-workflow order — a section the model left out
-shows the "no content yet" note instead of disappearing. Response metadata
-(`lang`, `model`, `usage`, `context_*`) is never rendered as a card.
-`/explain-concept` returns every section as `{ de, vi }`, and the modal renders
-both: German in bold at the top, the Vietnamese translation in italic/muted
-below, with a native caption per language. Failures show a friendly, localized
-message with a retry button; Escape, the backdrop and the close button dismiss
-the dialog and return focus to the card.
+`pflegeplanung`, `komplikationen`, `prognose`) and renders one numbered card per
+key. The card heading is the upper-cased key (`symptome` → `SYMPTOME`,
+`differentialdiagnosen` → `DIFFERENTIALDIAGNOSEN`) with the Vietnamese caption
+next to it (`conceptSectionTitle`). The medical contract is completed from
+`conceptCategorySections`, so all ten sections always appear in care-workflow
+order — a section the model left out shows the "no content yet" note instead of
+disappearing. Response metadata (`lang`, `model`, `usage`, `context_*`) is never
+rendered as a card. `/explain-concept` returns every section as `{ de, vi }`,
+and the modal renders both: German in regular type at the top, the Vietnamese
+translation in italics/muted below, with a native caption per language.
+`parseConceptExplanation` is idempotent — it also accepts the already normalised
+`{ concept, sections: [{ key, de, vi }] }` that `/api/concepts` returns, so the
+browser can parse the route answer again without losing or merging sections.
+Failures show a friendly, localized message with a retry button; Escape, the
+backdrop and the close button dismiss the dialog and return focus to the card.
 
 The AI service receives the UI locale as the optional multipart field `lang`
 (`de` / `vi`). Its JSON contract contains `teaching` with bilingual summaries and

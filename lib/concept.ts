@@ -184,6 +184,18 @@ export function conceptSectionTitle(key: string): BilingualText {
   return { de: humanized, vi: humanized };
 }
 
+/**
+ * Heading of a section card: the JSON key in upper case, separators turned into
+ * spaces (`symptome` → `SYMPTOME`, `sozial_geschichte` → `SOZIAL GESCHICHTE`).
+ */
+export function conceptSectionHeading(key: string): string {
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
 /** One section of an AI explanation, in both course languages. */
 export type ConceptSection = {
   /** JSON key of the section (`definition`, `symptome`, ...). */
@@ -266,6 +278,24 @@ function emptyText(): BilingualText {
 }
 
 /**
+ * Keys that describe a section instead of carrying its text. They are ignored
+ * when a legacy object without `de`/`vi` keys has to be flattened.
+ */
+const conceptSectionKeyFields = ["key", "id", "name", "title", "label"] as const;
+
+function sectionKeyOf(record: Record<string, unknown>): string {
+  for (const field of conceptSectionKeyFields) {
+    const value = record[field];
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+}
+
+/**
  * Reads one section. Current responses are `{ de, vi }`; older ones returned a
  * single string in the requested language. That string lands in the matching
  * slot, so the dialog still shows it without inventing a translation.
@@ -283,6 +313,12 @@ function readLocalizedText(
 
   if (typeof value === "object" && value !== null) {
     const record = value as Record<string, unknown>;
+    const hasLanguageKeys = [
+      "de",
+      "vi",
+      "german",
+      "vietnamese",
+    ].some((key) => key in record);
     const de = readText(record.de) || readText(record.german);
     const vi = readText(record.vi) || readText(record.vietnamese);
 
@@ -290,8 +326,25 @@ function readLocalizedText(
       return { de, vi };
     }
 
-    // Legacy object without language keys: flatten it into the fallback slot.
-    const text = readText(value);
+    // `{ de: "", vi: "" }` is an intentionally empty section (a contract entry
+    // the model left out); flattening it would turn its key into content.
+    if (hasLanguageKeys) {
+      return emptyText();
+    }
+
+    // Legacy object without language keys: flatten it into the fallback slot,
+    // skipping the structural fields of an already normalised section.
+    const text = Object.entries(record)
+      .filter(
+        ([key]) =>
+          !(conceptSectionKeyFields as readonly string[]).includes(
+            key.toLowerCase(),
+          ),
+      )
+      .map(([, item]) => readText(item))
+      .filter(Boolean)
+      .join("\n");
+
     return fallbackLocale === "de"
       ? { de: text, vi: "" }
       : { de: "", vi: text };
@@ -330,16 +383,49 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Sections are read from `sections` when the service nests them, otherwise
- * from the top level (the current flat contract).
+ * Sections of a payload, in response order, as `[key, value]` pairs. Three
+ * shapes are supported because the data passes the dialog twice:
+ *
+ * - flat top level (`{ definition: { de, vi }, symptome: {...} }`) — the
+ *   `/explain-concept` contract of the AI service;
+ * - a nested record (`{ sections: { definition: {...} } }`) — older wrapper;
+ * - an array of normalised sections (`{ sections: [{ key, de, vi }] }`) — what
+ *   `POST /api/concepts` returns after this module already parsed one time.
  */
-function sectionSource(record: Record<string, unknown>) {
-  return isRecord(record.sections) ? record.sections : record;
+function sectionEntries(
+  record: Record<string, unknown>,
+): Array<[string, unknown]> {
+  if (Array.isArray(record.sections)) {
+    const entries: Array<[string, unknown]> = [];
+
+    for (const item of record.sections) {
+      if (!isRecord(item)) {
+        continue;
+      }
+
+      const key = sectionKeyOf(item);
+
+      if (key) {
+        entries.push([key, item]);
+      }
+    }
+
+    return entries;
+  }
+
+  if (isRecord(record.sections)) {
+    return Object.entries(record.sections);
+  }
+
+  return Object.entries(record);
 }
 
 /**
  * Reads an `/explain-concept` payload defensively. Every section the model
  * returned is kept with its `{ de, vi }` texts and payload metadata is skipped.
+ * The parser is idempotent: an already normalised `{ concept, sections: [...] }`
+ * — the shape `POST /api/concepts` returns — parses to the same explanation, so
+ * the dialog can parse the route answer a second time without losing sections.
  *
  * When `category` is given, the result always contains the full contract of
  * that category in contract order (`conceptCategorySections`): a medical answer
@@ -362,7 +448,7 @@ export function parseConceptExplanation(
   const parsed: ConceptSection[] = [];
   const seen = new Set<string>();
 
-  for (const [key, rawSection] of Object.entries(sectionSource(value))) {
+  for (const [key, rawSection] of sectionEntries(value)) {
     const name = key.trim();
 
     if (!name || conceptMetadataKeys.has(name.toLowerCase())) {
