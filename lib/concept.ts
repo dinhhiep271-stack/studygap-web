@@ -8,8 +8,10 @@ import { defaultLocale, type Locale } from "@/lib/locales";
  * `{ de, vi }` holding the same content in German and Vietnamese. Which keys a
  * response carries depends on the `category` sent with the request: general
  * subjects answer with `definition`, `erklaerung`, `zusammenhang` and `kritik`,
- * medical subjects add or replace them with keys such as `symptome`,
- * `diagnose` or `therapie`. The dialog therefore renders every key it receives
+ * medical subjects answer with `definition`, `symptome`, `diagnostik`,
+ * `differentialdiagnosen`, `therapie`, `medikamente`, `prophylaxe`,
+ * `pflegeplanung`, `komplikationen` and `prognose`. The dialog therefore renders
+ * every key it receives
  * (`conceptSectionTitle` maps it to a bilingual caption) instead of hardcoding
  * four sections.
  */
@@ -78,24 +80,33 @@ export const conceptSectionTitles: Record<string, BilingualText> = {
   erklaerung: { de: "Erklärung", vi: "Giải thích" },
   zusammenhang: { de: "Zusammenhang", vi: "Liên hệ" },
   kritik: { de: "Kritik", vi: "Phản biện" },
-  // Medical structure.
+  // Medical structure: mirrors MEDICAL_CONCEPT_SYSTEM_PROMPT in studygap-ai so
+  // every section of `category=medical` has a German/Vietnamese caption.
   symptome: { de: "Symptome", vi: "Triệu chứng" },
+  diagnostik: { de: "Diagnostik", vi: "Chẩn đoán" },
+  differentialdiagnosen: {
+    de: "Differentialdiagnosen",
+    vi: "Chẩn đoán phân biệt",
+  },
+  therapie: { de: "Therapie", vi: "Điều trị" },
+  medikamente: { de: "Medikamente", vi: "Thuốc" },
+  prophylaxe: { de: "Prophylaxe", vi: "Dự phòng" },
+  pflegeplanung: { de: "Pflegeplanung", vi: "Kế hoạch chăm sóc" },
+  komplikationen: { de: "Komplikationen", vi: "Biến chứng" },
+  prognose: { de: "Prognose", vi: "Tiên lượng" },
+  // Further medical keys the model may answer with (aliases / older prompts).
   ursachen: { de: "Ursachen", vi: "Nguyên nhân" },
   aetiologie: { de: "Ätiologie", vi: "Căn nguyên" },
   risikofaktoren: { de: "Risikofaktoren", vi: "Yếu tố nguy cơ" },
   pathophysiologie: { de: "Pathophysiologie", vi: "Sinh lý bệnh" },
   diagnose: { de: "Diagnose", vi: "Chẩn đoán" },
-  diagnostik: { de: "Diagnostik", vi: "Chẩn đoán" },
   klinik: { de: "Klinik", vi: "Biểu hiện lâm sàng" },
-  therapie: { de: "Therapie", vi: "Điều trị" },
+  untersuchung: { de: "Untersuchung", vi: "Thăm khám" },
   behandlung: { de: "Behandlung", vi: "Điều trị" },
   pflege: { de: "Pflege", vi: "Chăm sóc" },
   praevention: { de: "Prävention", vi: "Phòng ngừa" },
-  prognose: { de: "Prognose", vi: "Tiên lượng" },
-  komplikationen: { de: "Komplikationen", vi: "Biến chứng" },
   anatomie: { de: "Anatomie", vi: "Giải phẫu" },
   physiologie: { de: "Physiologie", vi: "Sinh lý" },
-  medikamente: { de: "Medikamente", vi: "Thuốc" },
   nebenwirkungen: { de: "Nebenwirkungen", vi: "Tác dụng phụ" },
 };
 

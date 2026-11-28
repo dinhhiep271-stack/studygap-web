@@ -221,10 +221,13 @@ the current chapter summary/formulas as `context` and a `category` (`medical`
 when the subject name contains "Medizin", "Pflege" or "Krankheit", otherwise
 `general`), shows a loading state and then the answer in a modal. The modal does
 not hardcode its sections: it iterates over the keys the AI returned
-(`definition`, `erklaerung`, ... for general subjects, `symptome`, `diagnose`,
-`therapie`, ... for medical ones) and labels each with its bilingual title, e.g.
-`symptome` → "Symptome / Triệu chứng". `/explain-concept` returns every section
-as `{ de, vi }`, and the modal renders both: German in bold at the top, the
+(`definition`, `erklaerung`, ... for general subjects, and the ten medical
+sections `definition`, `symptome`, `diagnostik`, `differentialdiagnosen`,
+`therapie`, `medikamente`, `prophylaxe`, `pflegeplanung`, `komplikationen`,
+`prognose`) and labels each with its bilingual title, e.g. `symptome` →
+"Symptome / Triệu chứng", `differentialdiagnosen` →
+"Differentialdiagnosen / Chẩn đoán phân biệt". `/explain-concept` returns every
+section as `{ de, vi }`, and the modal renders both: German in bold at the top, the
 Vietnamese translation in italic/muted below, with a native caption per
 language. Failures show a friendly, localized message with a retry button;
 Escape, the backdrop and the close button dismiss the dialog and return focus to
