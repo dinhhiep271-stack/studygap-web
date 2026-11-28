@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ConceptMarkdown } from "@/components/concept-markdown";
 import { Spinner } from "@/components/spinner";
 import {
   conceptSectionHeading,
   conceptSectionTitle,
+  isMarkdownConceptSection,
   type ConceptCategory,
   type ConceptErrorCode,
   type ConceptExplanation,
@@ -81,6 +83,57 @@ const sectionPalette = [
     title: "text-fuchsia-900",
   },
 ] as const;
+
+/**
+ * One language block of a section card. Prose keeps its pre-wrapped paragraph,
+ * the structured `pflegeplanung` table goes through `ConceptMarkdown`, and an
+ * empty section shows the "no content" note.
+ */
+function SectionText({
+  text,
+  lang,
+  markdown,
+  tone,
+  emptyText,
+}: {
+  text: string;
+  lang: Locale;
+  /** Render `text` as Markdown (GFM table) instead of a plain paragraph. */
+  markdown: boolean;
+  /** Classes of the prose, the Markdown wrapper and the empty-state note. */
+  tone: { text: string; markdown: string; empty: string };
+  emptyText: string;
+}) {
+  if (!text) {
+    return (
+      <p
+        lang={lang}
+        className={`mt-0.5 text-sm leading-7 whitespace-pre-line ${tone.empty}`}
+      >
+        {emptyText}
+      </p>
+    );
+  }
+
+  if (markdown) {
+    return (
+      <ConceptMarkdown
+        content={text}
+        lang={lang}
+        className={`mt-0.5 text-sm ${tone.markdown}`}
+      />
+    );
+  }
+
+  return (
+    <p
+      lang={lang}
+      className={`mt-0.5 text-sm leading-7 whitespace-pre-line ${tone.text}`}
+    >
+      {text}
+    </p>
+  );
+}
 
 export function ConceptDialog({
   concept,
@@ -330,8 +383,9 @@ export function ConceptDialog({
                 // (`symptome` → `SYMPTOME`); the German caption stays identical
                 // to the key, so the key doubles as the German title.
                 const heading = conceptSectionHeading(section.key);
-                const hasGerman = section.de.length > 0;
-                const hasVietnamese = section.vi.length > 0;
+                // `pflegeplanung` arrives as a GFM care-plan table, so it is
+                // rendered as Markdown; every other section stays prose.
+                const isMarkdown = isMarkdownConceptSection(section.key);
 
                 return (
                   <section
@@ -376,16 +430,17 @@ export function ConceptDialog({
                         >
                           {localeNames.de} · {title.de}
                         </p>
-                        <p
+                        <SectionText
+                          text={section.de}
                           lang="de"
-                          className={`mt-0.5 text-sm leading-7 whitespace-pre-line ${
-                            hasGerman
-                              ? "font-normal text-zinc-800"
-                              : "text-zinc-500 italic"
-                          }`}
-                        >
-                          {hasGerman ? section.de : labels.emptySection}
-                        </p>
+                          markdown={isMarkdown}
+                          emptyText={labels.emptySection}
+                          tone={{
+                            text: "font-normal text-zinc-800",
+                            markdown: "text-zinc-800",
+                            empty: "text-zinc-500 italic",
+                          }}
+                        />
                       </div>
 
                       <div className="rounded-lg bg-white/70 px-3 py-2.5 ring-1 ring-white/70">
@@ -395,14 +450,17 @@ export function ConceptDialog({
                         >
                           {localeNames.vi} · {title.vi}
                         </p>
-                        <p
+                        <SectionText
+                          text={section.vi}
                           lang="vi"
-                          className={`mt-0.5 text-sm leading-7 whitespace-pre-line italic ${
-                            hasVietnamese ? "text-zinc-600" : "text-zinc-400"
-                          }`}
-                        >
-                          {hasVietnamese ? section.vi : labels.emptySection}
-                        </p>
+                          markdown={isMarkdown}
+                          emptyText={labels.emptySection}
+                          tone={{
+                            text: "text-zinc-600 italic",
+                            markdown: "text-zinc-600",
+                            empty: "text-zinc-400 italic",
+                          }}
+                        />
                       </div>
                     </div>
                   </section>

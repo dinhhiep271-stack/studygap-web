@@ -196,6 +196,17 @@ export function conceptSectionHeading(key: string): string {
     .toUpperCase();
 }
 
+/**
+ * Sections whose content is Markdown instead of prose. The medical contract
+ * asks `pflegeplanung` for one GFM table (Pflegediagnose / Ziel / Maßnahmen /
+ * Begründung), so the dialog renders that section with `react-markdown`; every
+ * other section stays a `whitespace-pre-line` paragraph. Keys are folded first,
+ * so `Pflegeplanung` and `pflege_planung` match as well.
+ */
+export function isMarkdownConceptSection(key: string): boolean {
+  return normalizeSectionKey(key) === "pflegeplanung";
+}
+
 /** One section of an AI explanation, in both course languages. */
 export type ConceptSection = {
   /** JSON key of the section (`definition`, `symptome`, ...). */

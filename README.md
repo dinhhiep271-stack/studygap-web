@@ -234,6 +234,12 @@ disappearing. Response metadata (`lang`, `model`, `usage`, `context_*`) is never
 rendered as a card. `/explain-concept` returns every section as `{ de, vi }`,
 and the modal renders both: German in regular type at the top, the Vietnamese
 translation in italics/muted below, with a native caption per language.
+`pflegeplanung` is the exception: the AI answers it with one GFM table
+(Pflegediagnose / Ziel / Maßnahmen / Begründung) instead of prose, so
+`isMarkdownConceptSection` marks it and the dialog renders that section through
+`components/concept-markdown.tsx` — `react-markdown` + `remark-gfm` with an
+explicitly styled table (border, coloured header, zebra rows, horizontal scroll
+on narrow screens, `<br>` inside cells as real line breaks).
 `parseConceptExplanation` is idempotent — it also accepts the already normalised
 `{ concept, sections: [{ key, de, vi }] }` that `/api/concepts` returns, so the
 browser can parse the route answer again without losing or merging sections.
