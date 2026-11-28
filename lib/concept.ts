@@ -4,53 +4,142 @@ import { defaultLocale, type Locale } from "@/lib/locales";
 /**
  * Shared contract of the AI concept explainer (`POST /explain-concept`).
  *
- * The FastAPI service answers bilingually: each of the four sections is an
- * object `{ de, vi }` holding the same content in German and Vietnamese. The
- * JSON keys stay German (`definition`, `erklaerung`, `zusammenhang`, `kritik`);
- * only the values carry both languages. The UI captions live in the dictionary
- * (`dict.concept`) so the dialog can be localised without touching this
- * contract.
+ * The FastAPI service answers bilingually: each section is an object
+ * `{ de, vi }` holding the same content in German and Vietnamese. Which keys a
+ * response carries depends on the `category` sent with the request: general
+ * subjects answer with `definition`, `erklaerung`, `zusammenhang` and `kritik`,
+ * medical subjects add or replace them with keys such as `symptome`,
+ * `diagnose` or `therapie`. The dialog therefore renders every key it receives
+ * (`conceptSectionTitle` maps it to a bilingual caption) instead of hardcoding
+ * four sections.
  */
 
-/** Section keys of the concept explanation, in display order. */
-export const conceptSectionKeys = [
-  "definition",
-  "erklaerung",
-  "zusammenhang",
-  "kritik",
-] as const;
+/** Content structure the AI service is asked for (`category` request field). */
+export const conceptCategories = ["general", "medical"] as const;
 
-export type ConceptSectionKey = (typeof conceptSectionKeys)[number];
+export type ConceptCategory = (typeof conceptCategories)[number];
+
+export function isConceptCategory(
+  value: unknown,
+): value is ConceptCategory {
+  return (
+    typeof value === "string" &&
+    (conceptCategories as readonly string[]).includes(value)
+  );
+}
 
 /**
- * Native captions of the four sections. They label the language blocks, so they
- * are fixed per language instead of coming from the active UI dictionary.
+ * Subject-name keywords that mark a medical subject. The comparison
+ * lower-cases the name and expands German umlauts, so "Medizin",
+ * "medizinische" and "MEDIZIN" all match.
  */
-export const conceptSectionNames: Record<
-  Locale,
-  Record<ConceptSectionKey, string>
-> = {
-  de: {
-    definition: "Definition",
-    erklaerung: "Erklärung",
-    zusammenhang: "Zusammenhang",
-    kritik: "Kritik",
-  },
-  vi: {
-    definition: "Định nghĩa",
-    erklaerung: "Giải thích",
-    zusammenhang: "Liên hệ",
-    kritik: "Phản biện",
-  },
+export const medicalSubjectKeywords = [
+  "medizin",
+  "pflege",
+  "krankheit",
+] as const;
+
+function foldSectionKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss");
+}
+
+/**
+ * Category for `POST /explain-concept`, derived from the subject name: a name
+ * that contains one of `medicalSubjectKeywords` makes the subject `medical`,
+ * everything else stays `general`.
+ */
+export function conceptCategoryForSubject(
+  subjectName: string | readonly string[],
+): ConceptCategory {
+  const names = typeof subjectName === "string" ? [subjectName] : subjectName;
+
+  return names.some((name) => {
+    const folded = foldSectionKey(name);
+
+    return medicalSubjectKeywords.some((keyword) => folded.includes(keyword));
+  })
+    ? "medical"
+    : "general";
+}
+
+/**
+ * Titles of the known section keys, in both languages. Keys are stored in their
+ * folded form (umlauts expanded, punctuation removed) so `erklaerung` and
+ * `Erklärung` resolve to the same entry.
+ */
+export const conceptSectionTitles: Record<string, BilingualText> = {
+  // General structure.
+  definition: { de: "Definition", vi: "Định nghĩa" },
+  erklaerung: { de: "Erklärung", vi: "Giải thích" },
+  zusammenhang: { de: "Zusammenhang", vi: "Liên hệ" },
+  kritik: { de: "Kritik", vi: "Phản biện" },
+  // Medical structure.
+  symptome: { de: "Symptome", vi: "Triệu chứng" },
+  ursachen: { de: "Ursachen", vi: "Nguyên nhân" },
+  aetiologie: { de: "Ätiologie", vi: "Căn nguyên" },
+  risikofaktoren: { de: "Risikofaktoren", vi: "Yếu tố nguy cơ" },
+  pathophysiologie: { de: "Pathophysiologie", vi: "Sinh lý bệnh" },
+  diagnose: { de: "Diagnose", vi: "Chẩn đoán" },
+  diagnostik: { de: "Diagnostik", vi: "Chẩn đoán" },
+  klinik: { de: "Klinik", vi: "Biểu hiện lâm sàng" },
+  therapie: { de: "Therapie", vi: "Điều trị" },
+  behandlung: { de: "Behandlung", vi: "Điều trị" },
+  pflege: { de: "Pflege", vi: "Chăm sóc" },
+  praevention: { de: "Prävention", vi: "Phòng ngừa" },
+  prognose: { de: "Prognose", vi: "Tiên lượng" },
+  komplikationen: { de: "Komplikationen", vi: "Biến chứng" },
+  anatomie: { de: "Anatomie", vi: "Giải phẫu" },
+  physiologie: { de: "Physiologie", vi: "Sinh lý" },
+  medikamente: { de: "Medikamente", vi: "Thuốc" },
+  nebenwirkungen: { de: "Nebenwirkungen", vi: "Tác dụng phụ" },
 };
 
-/** The four parts of one AI explanation, each in both course languages. */
+function normalizeSectionKey(key: string) {
+  return foldSectionKey(key).replace(/[\s_-]+/g, "");
+}
+
+/** `nebenwirkungen` → `Nebenwirkungen`, `sozial_geschichte` → `Sozial geschichte`. */
+function humanizeSectionKey(key: string) {
+  const text = key.replace(/[\s_-]+/g, " ").replace(/\s+/g, " ").trim();
+  const lower = text.toLowerCase();
+
+  return lower ? lower.charAt(0).toUpperCase() + lower.slice(1) : key;
+}
+
+/**
+ * Title of one section key, e.g. `symptome` → `{ de: "Symptome", vi: "Triệu
+ * chứng" }`. Unknown keys are humanised, so a new section of the AI service
+ * shows up without a frontend change.
+ */
+export function conceptSectionTitle(key: string): BilingualText {
+  const known = conceptSectionTitles[normalizeSectionKey(key)];
+
+  if (known) {
+    return known;
+  }
+
+  const humanized = humanizeSectionKey(key);
+
+  return { de: humanized, vi: humanized };
+}
+
+/** One section of an AI explanation, in both course languages. */
+export type ConceptSection = {
+  /** JSON key of the section (`definition`, `symptome`, ...). */
+  key: string;
+  de: string;
+  vi: string;
+};
+
+/** The concept name plus every section the AI returned, in response order. */
 export type ConceptExplanation = {
   concept: string;
-  definition: BilingualText;
-  erklaerung: BilingualText;
-  zusammenhang: BilingualText;
-  kritik: BilingualText;
+  sections: ConceptSection[];
 };
 
 /**
@@ -96,7 +185,6 @@ export type ConceptLabels = {
   close: string;
   emptySection: string;
   disclaimer: string;
-  sections: Record<ConceptSectionKey, string>;
 };
 
 function readText(value: unknown): string {
@@ -161,30 +249,69 @@ function hasLocalizedText(value: BilingualText) {
 }
 
 /**
- * Reads an `/explain-concept` payload defensively and returns `null` when the
- * model delivered neither a definition nor an explanation (the AI service
- * rejects that case as well).
+ * Keys that describe the payload itself instead of a section. Every other key
+ * is treated as a section, which is how the category-specific JSON structure
+ * (`symptome`, `diagnose`, ...) is picked up without a whitelist.
+ */
+const conceptMetadataKeys = new Set([
+  "success",
+  "concept",
+  "category",
+  "detail",
+  "error",
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Sections are read from `sections` when the service nests them, otherwise
+ * from the top level (the current flat contract).
+ */
+function sectionSource(record: Record<string, unknown>) {
+  return isRecord(record.sections) ? record.sections : record;
+}
+
+/**
+ * Reads an `/explain-concept` payload defensively. Every section the model
+ * returned is kept in response order with its `{ de, vi }` texts; empty
+ * sections are dropped. Returns `null` when no section is usable, which the AI
+ * service treats as an empty answer as well.
  */
 export function parseConceptExplanation(
   value: unknown,
   fallbackConcept = "",
   fallbackLocale: Locale = defaultLocale,
 ): ConceptExplanation | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (!isRecord(value)) {
     return null;
   }
 
-  const record = value as Record<string, unknown>;
-  const explanation: ConceptExplanation = {
-    concept: readText(record.concept) || fallbackConcept,
-    definition: readLocalizedText(record.definition, fallbackLocale),
-    erklaerung: readLocalizedText(record.erklaerung, fallbackLocale),
-    zusammenhang: readLocalizedText(record.zusammenhang, fallbackLocale),
-    kritik: readLocalizedText(record.kritik, fallbackLocale),
-  };
+  const sections: ConceptSection[] = [];
 
-  return hasLocalizedText(explanation.definition) ||
-    hasLocalizedText(explanation.erklaerung)
-    ? explanation
-    : null;
+  for (const [key, rawSection] of Object.entries(sectionSource(value))) {
+    const name = key.trim();
+
+    if (!name || conceptMetadataKeys.has(name.toLowerCase())) {
+      continue;
+    }
+
+    const text = readLocalizedText(rawSection, fallbackLocale);
+
+    if (!hasLocalizedText(text)) {
+      continue;
+    }
+
+    sections.push({ key: name, de: text.de, vi: text.vi });
+  }
+
+  if (sections.length === 0) {
+    return null;
+  }
+
+  return {
+    concept: readText(value.concept) || fallbackConcept,
+    sections,
+  };
 }

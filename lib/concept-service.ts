@@ -1,6 +1,7 @@
 import { normalizeApiBaseUrl } from "@/lib/api-url";
 import {
   parseConceptExplanation,
+  type ConceptCategory,
   type ConceptErrorCode,
   type ConceptExplanation,
 } from "@/lib/concept";
@@ -34,28 +35,30 @@ export class ConceptExplanationError extends Error {
 
 type ExplainResponse = {
   success?: boolean;
-  concept?: unknown;
-  definition?: unknown;
-  erklaerung?: unknown;
-  zusammenhang?: unknown;
-  kritik?: unknown;
   detail?: string;
   error?: string;
+  /** Section keys are category-specific, so only the metadata is typed. */
+  [key: string]: unknown;
 };
 
 /**
- * Calls the FastAPI service. `lang` only selects the language of the request
- * (and of legacy single-language answers); current responses carry both
- * languages in every section. All failures become `ConceptExplanationError`.
+ * Calls the FastAPI service. `lang` selects the request language (and the
+ * fallback slot of legacy single-language answers), `category` tells the model
+ * which section structure to use (`general` or `medical`). Current responses
+ * carry both languages in every section. All failures become
+ * `ConceptExplanationError`.
  */
 export async function explainConcept({
   concept,
   context = "",
+  category = "general",
   lang,
 }: {
   concept: string;
   /** Related chapter material the model may ground the explanation on. */
   context?: string;
+  /** Picked from the subject name (`conceptCategoryForSubject`). */
+  category?: ConceptCategory;
   lang: Locale;
 }): Promise<ConceptExplanation> {
   let response: Response;
@@ -64,7 +67,7 @@ export async function explainConcept({
     response = await fetch(`${AI_BASE_URL}/explain-concept`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ concept, context, lang }),
+      body: JSON.stringify({ concept, context, category, lang }),
       cache: "no-store",
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     });

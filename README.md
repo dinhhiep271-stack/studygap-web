@@ -28,7 +28,7 @@ the last selected language (falling back to Vietnamese).
 | `POST /api/auth/logout` | Ends the Google (Auth.js) session and clears the credentials cookie |
 | `POST /api/documents`   | Stores one AI result for a subject in SQLite       |
 | `POST /api/exams`       | Generates + stores an AI paper (chapter practice or final exam) |
-| `POST /api/concepts`    | Explains one key concept with the AI (definition, explanation, context, critique) |
+| `POST /api/concepts`    | Explains one key concept with the AI (category-specific bilingual sections) |
 
 ## Login (single-user access)
 
@@ -157,10 +157,11 @@ label.
   AI concept explainer. The browser calls `POST /api/concepts`
   (`lib/concept-client.ts`), the route handler forwards the request to
   `POST /explain-concept` with the server-only `STUDYGAP_API_URL`
-  (`lib/concept-service.ts`), and `lib/concept.ts` holds the shared four-section
-  contract (`definition`, `erklaerung`, `zusammenhang`, `kritik`) plus a
-  defensive parser, because the model may answer a section with a list or an
-  object instead of a string.
+  (`lib/concept-service.ts`), and `lib/concept.ts` holds the shared contract
+  plus a defensive parser, because the model may answer a section with a list
+  or an object instead of a string. The response is dynamic: every section key
+  comes back as `{ de, vi }`, and `conceptSectionTitle` maps known keys
+  (`definition`, `symptome`, ...) to a German/Vietnamese caption.
 
 ```bash
 npm run db:push      # create/update the SQLite tables (dev.db)
@@ -215,11 +216,15 @@ The subject page also works as an exam center:
   attempt (already expired) starts fresh.
 
 Every key concept in the chapter content is a button ("Begriff erklären / Giải
-thích khái niệm"). Clicking it calls `POST /api/concepts` with the concept name
-and the current chapter summary/formulas as `context`, shows a loading state and
-then the answer in a modal with the four sections Definition, Erklärung,
-Zusammenhang and Kritik. `/explain-concept` returns every section as
-`{ de, vi }`, and the modal renders both: German in bold at the top, the
+thích khái niệm"). Clicking it calls `POST /api/concepts` with the concept name,
+the current chapter summary/formulas as `context` and a `category` (`medical`
+when the subject name contains "Medizin", "Pflege" or "Krankheit", otherwise
+`general`), shows a loading state and then the answer in a modal. The modal does
+not hardcode its sections: it iterates over the keys the AI returned
+(`definition`, `erklaerung`, ... for general subjects, `symptome`, `diagnose`,
+`therapie`, ... for medical ones) and labels each with its bilingual title, e.g.
+`symptome` → "Symptome / Triệu chứng". `/explain-concept` returns every section
+as `{ de, vi }`, and the modal renders both: German in bold at the top, the
 Vietnamese translation in italic/muted below, with a native caption per
 language. Failures show a friendly, localized message with a retry button;
 Escape, the backdrop and the close button dismiss the dialog and return focus to

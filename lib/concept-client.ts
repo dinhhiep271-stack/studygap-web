@@ -1,6 +1,7 @@
 import {
   isConceptErrorCode,
   parseConceptExplanation,
+  type ConceptCategory,
   type ConceptErrorCode,
   type ConceptExplanation,
 } from "@/lib/concept";
@@ -28,7 +29,14 @@ export async function fetchConceptExplanation(
     concept,
     lang,
     context,
-  }: { concept: string; lang: Locale; context?: string },
+    category,
+  }: {
+    concept: string;
+    lang: Locale;
+    context?: string;
+    /** Section structure the AI should use; defaults to `general` server-side. */
+    category?: ConceptCategory;
+  },
   signal?: AbortSignal,
 ): Promise<ConceptExplanation> {
   let response: Response;
@@ -37,7 +45,7 @@ export async function fetchConceptExplanation(
     response = await fetch("/api/concepts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ concept, context, lang }),
+      body: JSON.stringify({ concept, context, category, lang }),
       signal,
     });
   } catch (error) {

@@ -8,6 +8,7 @@ import { ExamRunner } from "@/components/exam-runner";
 import { FinalExamPanel } from "@/components/final-exam-panel";
 import { PracticeCenter } from "@/components/practice-center";
 import { summaryForLocale, type ParsedCurriculum } from "@/lib/curriculum";
+import type { ConceptCategory } from "@/lib/concept";
 import type { GeneratedExam } from "@/lib/exam";
 import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/locales";
@@ -39,6 +40,7 @@ export function SubjectLearning({
   chapters,
   uploadHref,
   dict,
+  conceptCategory,
   initialChapterId,
   initialTab = "content",
   initialFormat,
@@ -49,6 +51,8 @@ export function SubjectLearning({
   chapters: LearningChapter[];
   uploadHref: string;
   dict: Dictionary;
+  /** Section structure of the AI concept explainer (`medical` / `general`). */
+  conceptCategory: ConceptCategory;
   /** Deep link support: `?chapter=<document id>`. */
   initialChapterId?: string;
   initialTab?: LearningTab;
@@ -492,6 +496,7 @@ export function SubjectLearning({
         lang={lang}
         labels={dict.concept}
         context={conceptContext}
+        category={conceptCategory}
         onClose={() => setActiveConcept(null)}
       />
     </div>

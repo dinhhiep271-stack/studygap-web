@@ -346,7 +346,7 @@ const de: Dictionary = {
       "Zweisprachige Antwort: Deutsch fett oben, vietnamesische Übersetzung kursiv darunter.",
     loading: "Der Begriff wird analysiert …",
     loadingHint:
-      "Die KI liest den Begriff im Kontext dieses Kapitels und erstellt Definition, Erklärung, Zusammenhang und Kritik.",
+      "Die KI liest den Begriff im Kontext dieses Kapitels und erstellt eine zweisprachige Erklärung.",
     errorTitle: "Erklärung nicht verfügbar",
     errors: {
       network:
@@ -371,12 +371,6 @@ const de: Dictionary = {
     emptySection: "Zu diesem Abschnitt liegt keine Antwort vor.",
     disclaimer:
       "KI-generierte Erklärung – kann Fehler enthalten. Prüfe sie anhand deines Materials.",
-    sections: {
-      definition: "Definition",
-      erklaerung: "Erklärung",
-      zusammenhang: "Zusammenhang",
-      kritik: "Kritik",
-    },
   },
   practice: {
     title: "Übungscenter",
@@ -690,7 +684,7 @@ const vi: Dictionary = {
       "Giải thích song ngữ: tiếng Đức in đậm ở trên, bản dịch tiếng Việt in nghiêng bên dưới.",
     loading: "Đang phân tích khái niệm …",
     loadingHint:
-      "AI đọc khái niệm trong ngữ cảnh của chương này và tạo định nghĩa, giải thích, liên hệ và phản biện.",
+      "AI đọc khái niệm trong ngữ cảnh của chương này và tạo phần giải thích song ngữ.",
     errorTitle: "Chưa thể giải thích",
     errors: {
       network: "Không kết nối được dịch vụ AI. Hãy kiểm tra mạng và thử lại.",
@@ -710,12 +704,6 @@ const vi: Dictionary = {
     emptySection: "Phần này chưa có nội dung.",
     disclaimer:
       "Nội dung do AI tạo – có thể có sai sót. Hãy đối chiếu với tài liệu của bạn.",
-    sections: {
-      definition: "Định nghĩa",
-      erklaerung: "Giải thích",
-      zusammenhang: "Liên hệ",
-      kritik: "Phản biện",
-    },
   },
   practice: {
     title: "Trung tâm luyện tập",

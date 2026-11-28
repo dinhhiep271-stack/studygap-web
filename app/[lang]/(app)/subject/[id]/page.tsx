@@ -7,6 +7,7 @@ import {
   type LearningChapter,
 } from "@/components/subject-learning";
 import { buildChapters } from "@/lib/chapters";
+import { conceptCategoryForSubject } from "@/lib/concept";
 import { getCurrentUserId } from "@/lib/current-user";
 import { getExam } from "@/lib/exam-service";
 import { getDictionary } from "@/lib/i18n";
@@ -173,6 +174,16 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
   const initialTab =
     firstValue(query.tab) === "practice" ? "practice" : "content";
 
+  // The AI picks its section structure from the category: medical subjects get
+  // `symptome`, `diagnose`, ... instead of the general four sections. Both
+  // names and the slug are checked so a self-created subject ("Pflege ...")
+  // works as well.
+  const conceptCategory = conceptCategoryForSubject([
+    subject.name.de,
+    subject.name.vi,
+    subject.id,
+  ]);
+
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:py-16">
       <nav
@@ -266,6 +277,7 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
           chapters={chapters}
           uploadHref={uploadHref}
           dict={dict}
+          conceptCategory={conceptCategory}
           initialChapterId={initialChapterId}
           initialTab={initialTab}
           initialFormat={initialFormat}

@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/spinner";
 import {
-  conceptSectionKeys,
-  conceptSectionNames,
+  conceptSectionTitle,
+  type ConceptCategory,
   type ConceptErrorCode,
   type ConceptExplanation,
   type ConceptLabels,
-  type ConceptSectionKey,
 } from "@/lib/concept";
 import {
   ConceptRequestError,
@@ -24,37 +23,39 @@ import { localeNames, type Locale } from "@/lib/locales";
  * the dialog (or choosing another concept) aborts the pending request.
  */
 
-const sectionStyles: Record<
-  ConceptSectionKey,
-  { card: string; badge: string; title: string }
-> = {
-  definition: {
+/**
+ * Colour palette for the sections. The AI picks the section keys per subject
+ * category, so the palette is rotated by position instead of keyed by name.
+ */
+const sectionPalette = [
+  {
     card: "border-emerald-100 bg-emerald-50/60",
     badge: "bg-emerald-600 text-white",
     title: "text-emerald-900",
   },
-  erklaerung: {
+  {
     card: "border-sky-100 bg-sky-50/60",
     badge: "bg-sky-600 text-white",
     title: "text-sky-900",
   },
-  zusammenhang: {
+  {
     card: "border-violet-100 bg-violet-50/60",
     badge: "bg-violet-600 text-white",
     title: "text-violet-900",
   },
-  kritik: {
+  {
     card: "border-amber-100 bg-amber-50/60",
     badge: "bg-amber-500 text-white",
     title: "text-amber-900",
   },
-};
+] as const;
 
 export function ConceptDialog({
   concept,
   lang,
   labels,
   context,
+  category,
   onClose,
 }: {
   /** Concept name to explain; `null` keeps the dialog closed. */
@@ -63,6 +64,8 @@ export function ConceptDialog({
   labels: ConceptLabels;
   /** Related chapter material forwarded to the AI as grounding context. */
   context?: string;
+  /** Section structure of the answer (`medical` for medical subjects). */
+  category?: ConceptCategory;
   onClose: () => void;
 }) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
@@ -85,7 +88,10 @@ export function ConceptDialog({
 
     const controller = new AbortController();
 
-    fetchConceptExplanation({ concept, lang, context }, controller.signal)
+    fetchConceptExplanation(
+      { concept, lang, context, category },
+      controller.signal,
+    )
       .then((result) => {
         if (controller.signal.aborted) {
           return;
@@ -106,7 +112,7 @@ export function ConceptDialog({
       });
 
     return () => controller.abort();
-  }, [attempt, concept, context, lang]);
+  }, [attempt, category, concept, context, lang]);
 
   // Lock the page behind the modal and return focus to the concept card.
   useEffect(() => {
@@ -285,16 +291,22 @@ export function ConceptDialog({
                 {labels.bilingualHint}
               </p>
 
-              {conceptSectionKeys.map((key, index) => {
-                const style = sectionStyles[key];
-                const content = explanation[key];
-                const hasGerman = content.de.length > 0;
-                const hasVietnamese = content.vi.length > 0;
+              {explanation.sections.map((section, index) => {
+                const style = sectionPalette[index % sectionPalette.length];
+                const title = conceptSectionTitle(section.key);
+                // Known keys have a German and a Vietnamese caption; unknown
+                // keys fall back to the same humanised label for both.
+                const heading =
+                  title.de === title.vi
+                    ? title.de
+                    : `${title.de} / ${title.vi}`;
+                const hasGerman = section.de.length > 0;
+                const hasVietnamese = section.vi.length > 0;
 
                 return (
                   <section
-                    key={key}
-                    aria-label={labels.sections[key]}
+                    key={`${section.key}-${index}`}
+                    aria-label={heading}
                     className={`rounded-xl border px-4 py-3.5 ${style.card}`}
                   >
                     <div className="flex items-center gap-2">
@@ -307,7 +319,7 @@ export function ConceptDialog({
                       <h3
                         className={`text-sm font-semibold tracking-wide uppercase ${style.title}`}
                       >
-                        {labels.sections[key]}
+                        {heading}
                       </h3>
                       <span
                         aria-hidden="true"
@@ -323,7 +335,7 @@ export function ConceptDialog({
                           lang="de"
                           className="text-[11px] font-bold tracking-wide text-zinc-700 uppercase"
                         >
-                          {localeNames.de} · {conceptSectionNames.de[key]}
+                          {localeNames.de} · {title.de}
                         </p>
                         <p
                           lang="de"
@@ -333,7 +345,7 @@ export function ConceptDialog({
                               : "text-zinc-500 italic"
                           }`}
                         >
-                          {hasGerman ? content.de : labels.emptySection}
+                          {hasGerman ? section.de : labels.emptySection}
                         </p>
                       </div>
 
@@ -342,7 +354,7 @@ export function ConceptDialog({
                           lang="vi"
                           className="text-[11px] font-semibold tracking-wide text-zinc-500 uppercase italic"
                         >
-                          {localeNames.vi} · {conceptSectionNames.vi[key]}
+                          {localeNames.vi} · {title.vi}
                         </p>
                         <p
                           lang="vi"
@@ -350,7 +362,7 @@ export function ConceptDialog({
                             hasVietnamese ? "text-zinc-600" : "text-zinc-400"
                           }`}
                         >
-                          {hasVietnamese ? content.vi : labels.emptySection}
+                          {hasVietnamese ? section.vi : labels.emptySection}
                         </p>
                       </div>
                     </div>

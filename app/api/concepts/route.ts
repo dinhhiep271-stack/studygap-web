@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isConceptCategory } from "@/lib/concept";
 import {
   ConceptExplanationError,
   explainConcept,
@@ -9,10 +10,12 @@ import { defaultLocale, hasLocale } from "@/lib/locales";
  * POST /api/concepts
  *
  * Explains one key concept through the AI service (`POST /explain-concept`).
- * Body: `{ concept, context?, lang? }`.
+ * Body: `{ concept, context?, category?, lang? }`.
  *
- * The browser cannot call the AI service directly because `STUDYGAP_API_URL`
- * is server-only, so this route is the proxy. The response is
+ * `category` (`general` or `medical`) selects the section structure of the AI
+ * answer; the subject page derives it from the subject name. The browser cannot
+ * call the AI service directly because `STUDYGAP_API_URL` is server-only, so
+ * this route is the proxy. The response is
  * `{ explanation: ConceptExplanation }`; errors are `{ error: <code>, detail }`
  * so the dialog can pick a localized message.
  */
@@ -74,11 +77,15 @@ export async function POST(request: Request) {
   const requestedLang =
     typeof body.lang === "string" ? body.lang.trim().toLowerCase() : "";
   const lang = hasLocale(requestedLang) ? requestedLang : defaultLocale;
+  // Unknown or missing categories fall back to the general structure, so an
+  // outdated client keeps working.
+  const category = isConceptCategory(body.category) ? body.category : "general";
 
   try {
     const explanation = await explainConcept({
       concept: concept.slice(0, MAX_CONCEPT_LENGTH),
       context,
+      category,
       lang,
     });
 
