@@ -17,11 +17,11 @@ import {
   type ExamContextChapter,
 } from "@/lib/exam-service";
 import { defaultLocale, hasLocale } from "@/lib/locales";
+import { findSubjectProfile } from "@/lib/subject-catalog";
 import {
   documentsForLocale,
   getSubjectDocuments,
 } from "@/lib/subject-documents";
-import { getSubject } from "@/lib/subjects";
 
 /**
  * POST /api/exams
@@ -75,11 +75,6 @@ export async function POST(request: Request) {
 
   const subjectId =
     typeof body.subjectId === "string" ? body.subjectId.trim() : "";
-  const subject = getSubject(subjectId);
-
-  if (!subject) {
-    return badRequest("unknown-subject");
-  }
 
   const kind: ExamKind = isExamKind(body.kind) ? body.kind : "chapter";
   const requestedLang =
@@ -100,6 +95,15 @@ export async function POST(request: Request) {
   // chapters are valid for both locales, legacy ones only for their upload
   // language.
   const userId = await getCurrentUserId();
+
+  // Static subjects resolve without a query; self-created ones only within the
+  // user's own rows (`findSubjectProfile`).
+  const subject = await findSubjectProfile(userId, subjectId);
+
+  if (!subject) {
+    return badRequest("unknown-subject");
+  }
+
   const storedDocuments = await getSubjectDocuments(userId, subjectId);
   const documents = documentsForLocale(storedDocuments, language);
 

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { getCurrentUserId } from "@/lib/current-user";
 import { getDictionary } from "@/lib/i18n";
 import { defaultLocale, hasLocale } from "@/lib/locales";
-import { subjects } from "@/lib/subjects";
+import { listSubjectProfiles } from "@/lib/subject-catalog";
 import { UploadForm, type SubjectOption } from "./upload-form";
 
 type UploadPageProps = {
@@ -21,8 +22,8 @@ export async function generateMetadata({
 }
 
 /**
- * Cache Components: `searchParams` is URL data, so it is read behind a Suspense
- * boundary (same pattern as the subject page).
+ * Cache Components: `searchParams` and the session are request data, so both are
+ * read behind the Suspense boundary above (same pattern as the subject page).
  */
 export default function UploadPage({ params, searchParams }: UploadPageProps) {
   return (
@@ -57,8 +58,11 @@ async function UploadPageContent({ params, searchParams }: UploadPageProps) {
   const dict = getDictionary(lang);
 
   // Localised subject picker; `?subject=` preselects the subject the user came
-  // from ("upload more" on a subject page).
-  const subjectOptions: SubjectOption[] = subjects.map((item) => ({
+  // from ("upload more" on a subject page or a freshly created subject).
+  // `listSubjectProfiles` merges the static catalogue with the user's own rows.
+  const userId = await getCurrentUserId();
+  const profiles = await listSubjectProfiles(userId);
+  const subjectOptions: SubjectOption[] = profiles.map((item) => ({
     id: item.id,
     name: item.name[lang],
     code: item.code,

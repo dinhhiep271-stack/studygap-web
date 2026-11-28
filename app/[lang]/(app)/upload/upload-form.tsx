@@ -89,7 +89,8 @@ type FileOutcome = {
 export type SubjectOption = {
   id: string;
   name: string;
-  code: string;
+  /** `null` for subjects the user created (they have no course code). */
+  code: string | null;
 };
 
 type UploadFormProps = {
@@ -700,7 +701,9 @@ export function UploadForm({
           >
             {subjects.map((subject) => (
               <option key={subject.id} value={subject.id}>
-                {subject.name} · {subject.code}
+                {subject.code
+                  ? `${subject.name} · ${subject.code}`
+                  : subject.name}
               </option>
             ))}
           </select>

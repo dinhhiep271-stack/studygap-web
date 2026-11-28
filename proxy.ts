@@ -102,6 +102,33 @@ function postLoginDestination(request: NextRequest, locale: Locale): string {
   return next === "/" ? `/${locale}` : next;
 }
 
+/**
+ * Existiert der Slug als Fach? Drei Quellen: `new` (Seite zum Anlegen),
+ * `lib/subjects.ts` (statisch, ohne Query) und die Tabelle `Subject`
+ * (selbst angelegte Fächer). Ein Datenbankfehler lässt den Slug durch
+ * (fail open) – die Fachseite zeigt dann selbst ihr Not-found-UI.
+ */
+async function isKnownSubject(id: string): Promise<boolean> {
+  if (id === "new" || getSubject(id)) {
+    return true;
+  }
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    // `id` ist nur zusammen mit `userId` eindeutig, deshalb `findFirst`.
+    const match = await prisma.subject.findFirst({
+      where: { id },
+      select: { id: true },
+    });
+
+    return match !== null;
+  } catch (error) {
+    console.error("Could not verify the subject slug.", error);
+
+    return true;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -189,9 +216,10 @@ export async function proxy(request: NextRequest) {
 
     // Cache Components sends the shell before a page-level notFound() runs, so
     // unknown subject slugs are routed to the global 404 to keep a 404 status.
+    // `/subject/new` and self-created subjects are known as well.
     const [, , section, id] = pathname.split("/");
     const hasUnknownSubject =
-      section === "subject" && Boolean(id) && !getSubject(id);
+      section === "subject" && Boolean(id) && !(await isKnownSubject(id));
 
     let response;
     if (hasUnknownSubject) {

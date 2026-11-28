@@ -145,9 +145,15 @@ export function documentsForLocale(
 
 /**
  * Stores one AI result. `Document.subjectId` references `Subject.id`, so the
- * subject row is upserted first: the subject list itself lives in
- * `lib/subjects.ts` and is not seeded into the database. The row is keyed by
- * `(userId, subjectId)` – two users can own the same static subject slug.
+ * subject row is upserted first:
+ *
+ * - static subjects (`lib/subjects.ts`) are not seeded into the database, so
+ *   uploading the first document creates their row;
+ * - subjects created on `/[lang]/subject/new` already exist and the upsert
+ *   simply rewrites the same names.
+ *
+ * The row is keyed by `(userId, subjectId)` – two users can own the same subject
+ * slug without sharing documents.
  */
 export async function saveSubjectDocument({
   userId,

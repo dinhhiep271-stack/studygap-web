@@ -12,6 +12,7 @@ import { getExam } from "@/lib/exam-service";
 import { getDictionary } from "@/lib/i18n";
 import { hasLocale, otherLocale } from "@/lib/locales";
 import { isPracticeFormat } from "@/lib/practice";
+import { findSubjectProfile } from "@/lib/subject-catalog";
 import {
   documentsForLocale,
   getSubjectDocuments,
@@ -41,7 +42,19 @@ export async function generateMetadata({
     notFound();
   }
 
-  const subject = getSubject(id);
+  // Statische Fächer kommen ohne Datenbank aus; selbst angelegte Fächer werden
+  // erst im Request-Kontext (Cookie + Prisma) aufgelöst.
+  const staticSubject = getSubject(id);
+
+  if (staticSubject) {
+    return {
+      title: staticSubject.name[lang],
+      description: staticSubject.summary[lang],
+    };
+  }
+
+  const userId = await getCurrentUserId();
+  const subject = await findSubjectProfile(userId, id);
 
   // Resolve the 404 before the response starts streaming so it gets a 404 status.
   if (!subject) {
@@ -50,7 +63,7 @@ export async function generateMetadata({
 
   return {
     title: subject.name[lang],
-    description: subject.summary[lang],
+    description: subject.summary[lang] || undefined,
   };
 }
 
@@ -94,7 +107,10 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
     notFound();
   }
 
-  const subject = getSubject(id);
+  // Session first: a subject slug only resolves within the user's own rows, so
+  // two accounts never see each other's self-created subjects.
+  const userId = await getCurrentUserId();
+  const subject = await findSubjectProfile(userId, id);
 
   if (!subject) {
     notFound();
@@ -112,7 +128,6 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
   // they were generated in; the hint below counts those hidden rows. Every query
   // is scoped to the signed-in user, so two accounts never share chapters,
   // language hints or stored exams.
-  const userId = await getCurrentUserId();
   const requestedExamId = firstValue(query.exam);
   const [storedDocuments, storedExam] = await Promise.all([
     getSubjectDocuments(userId, id),
@@ -182,12 +197,16 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
         </p>
 
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium">
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700 ring-1 ring-emerald-100">
-            {subject.code}
-          </span>
-          <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600">
-            {subject.semester[lang]}
-          </span>
+          {subject.code ? (
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700 ring-1 ring-emerald-100">
+              {subject.code}
+            </span>
+          ) : null}
+          {subject.semester ? (
+            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600">
+              {subject.semester[lang]}
+            </span>
+          ) : null}
           <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600">
             {chapters.length} {dict.subject.chapterUnit}
           </span>
@@ -199,9 +218,11 @@ async function SubjectDetail({ params, searchParams }: SubjectPageProps) {
         <p lang={secondaryLang} className="mt-1 text-lg font-medium text-zinc-500">
           {subject.name[secondaryLang]}
         </p>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-600">
-          {subject.summary[lang]}
-        </p>
+        {subject.summary[lang] ? (
+          <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-600">
+            {subject.summary[lang]}
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-zinc-500">{dict.subject.learningHint}</p>
 
         <div className="mt-6 flex flex-wrap gap-3">

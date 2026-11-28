@@ -3,8 +3,8 @@ import { readableFileName } from "@/lib/chapters";
 import { getCurrentUserId } from "@/lib/current-user";
 import { parseCurriculum, type ParsedCurriculum } from "@/lib/curriculum";
 import { defaultLocale, hasLocale } from "@/lib/locales";
+import { findSubjectProfile } from "@/lib/subject-catalog";
 import { saveSubjectDocument } from "@/lib/subject-documents";
-import { getSubject } from "@/lib/subjects";
 
 /**
  * POST /api/documents
@@ -55,11 +55,6 @@ export async function POST(request: Request) {
 
   const subjectId =
     typeof body.subjectId === "string" ? body.subjectId.trim() : "";
-  const subject = getSubject(subjectId);
-
-  if (!subject) {
-    return badRequest("Unknown subjectId.");
-  }
 
   const fileName =
     typeof body.fileName === "string" ? body.fileName.trim() : "";
@@ -88,6 +83,15 @@ export async function POST(request: Request) {
   try {
     const curriculum = parseCurriculum(body.curriculum);
     const userId = await getCurrentUserId();
+
+    // Static subjects resolve without a query; self-created ones only within the
+    // user's own rows (`findSubjectProfile`).
+    const subject = await findSubjectProfile(userId, subjectId);
+
+    if (!subject) {
+      return badRequest("Unknown subjectId.");
+    }
+
     const document = await saveSubjectDocument({
       userId,
       subjectId,

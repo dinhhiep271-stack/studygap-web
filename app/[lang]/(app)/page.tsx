@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDictionary } from "@/lib/i18n";
-import { hasLocale, otherLocale } from "@/lib/locales";
-import { subjects } from "@/lib/subjects";
+import { Suspense } from "react";
+import { getCurrentUserId } from "@/lib/current-user";
+import { getDictionary, type Dictionary } from "@/lib/i18n";
+import { hasLocale, otherLocale, type Locale } from "@/lib/locales";
+import { listSubjectProfiles } from "@/lib/subject-catalog";
 
 type HomePageProps = {
   params: Promise<{ lang: string }>;
@@ -49,7 +51,6 @@ export default async function HomePage({ params }: HomePageProps) {
   }
 
   const dict = getDictionary(lang);
-  const secondaryLang = otherLocale(lang);
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12 sm:py-16">
@@ -64,7 +65,7 @@ export default async function HomePage({ params }: HomePageProps) {
           </p>
         </div>
         <Link
-          href={`/${lang}/upload`}
+          href={`/${lang}/subject/new`}
           className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
         >
           <PlusIcon />
@@ -72,6 +73,52 @@ export default async function HomePage({ params }: HomePageProps) {
         </Link>
       </section>
 
+      {/*
+        Cache Components: die Liste hängt am angemeldeten Nutzer (und damit an
+        einem Cookie), deshalb streamt sie hinter einer Suspense-Grenze; Kopf
+        und Button oben bleiben Teil der statischen Shell.
+      */}
+      <Suspense fallback={<SubjectGridSkeleton dict={dict} />}>
+        <SubjectGrid lang={lang} dict={dict} />
+      </Suspense>
+    </div>
+  );
+}
+
+/** Platzhalter in der Form des echten Rasters (2 Spalten, 4 Karten). */
+function SubjectGridSkeleton({ dict }: { dict: Dictionary }) {
+  return (
+    <div aria-busy="true" className="mt-10 animate-pulse">
+      <span className="sr-only">{dict.home.listLabel}</span>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {[0, 1, 2, 3].map((index) => (
+          <div
+            key={index}
+            className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+          >
+            <div className="h-9 w-9 rounded-xl bg-zinc-200/80" />
+            <div className="mt-4 h-5 w-2/3 rounded bg-zinc-200/80" />
+            <div className="mt-2 h-4 w-1/3 rounded bg-zinc-100" />
+            <div className="mt-4 h-4 w-full rounded bg-zinc-100" />
+            <div className="mt-2 h-4 w-4/5 rounded bg-zinc-100" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fächer des angemeldeten Nutzers: die vier Beispiel-Fächer aus
+ * `lib/subjects.ts` plus alles, was über `/[lang]/subject/new` angelegt wurde.
+ */
+async function SubjectGrid({ lang, dict }: { lang: Locale; dict: Dictionary }) {
+  const userId = await getCurrentUserId();
+  const subjects = await listSubjectProfiles(userId);
+  const secondaryLang = otherLocale(lang);
+
+  return (
+    <>
       <section
         aria-label={dict.home.listLabel}
         className="mt-10 grid gap-4 sm:grid-cols-2"
@@ -86,9 +133,11 @@ export default async function HomePage({ params }: HomePageProps) {
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
-                {subject.semester[lang]}
-              </span>
+              {subject.semester ? (
+                <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
+                  {subject.semester[lang]}
+                </span>
+              ) : null}
             </div>
 
             <h2 className="mt-4 text-lg font-semibold tracking-tight text-zinc-900">
@@ -100,12 +149,14 @@ export default async function HomePage({ params }: HomePageProps) {
             >
               {subject.name[secondaryLang]}
             </p>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
-              {subject.summary[lang]}
-            </p>
+            {subject.summary[lang] ? (
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                {subject.summary[lang]}
+              </p>
+            ) : null}
 
             <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-6 text-xs font-medium text-zinc-500">
-              <span>{subject.code}</span>
+              {subject.code ? <span>{subject.code}</span> : null}
               <span className="ml-auto inline-flex items-center gap-1.5 text-emerald-700">
                 {dict.home.enter}
                 <ArrowIcon />
@@ -118,6 +169,7 @@ export default async function HomePage({ params }: HomePageProps) {
       <p className="mt-8 text-sm text-zinc-500">
         {subjects.length} {dict.home.subjectsUnit}
       </p>
-    </div>
+    </>
   );
 }
+

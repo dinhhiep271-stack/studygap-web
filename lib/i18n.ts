@@ -150,6 +150,34 @@ export type Dictionary = {
       unknown: string;
     };
   };
+  /** Formular zum Anlegen eines Fachs (`/[lang]/subject/new`). */
+  newSubject: {
+    metaTitle: string;
+    back: string;
+    eyebrow: string;
+    title: string;
+    intro: string;
+    nameDeLabel: string;
+    nameDeHint: string;
+    nameDePlaceholder: string;
+    nameViLabel: string;
+    nameViHint: string;
+    nameViPlaceholder: string;
+    descriptionLabel: string;
+    descriptionHint: string;
+    descriptionPlaceholder: string;
+    optional: string;
+    submit: string;
+    submitting: string;
+    cancel: string;
+    errors: {
+      nameDe: string;
+      nameVi: string;
+      tooLong: string;
+      network: string;
+      save: string;
+    };
+  };
   upload: {
     metaTitle: string;
     back: string;
@@ -453,6 +481,37 @@ const de: Dictionary = {
       "invalid-body": "Ungültige Anfrage.",
       "invalid-json": "Ungültige Anfrage.",
       unknown: "Das Blatt konnte nicht erstellt werden. Bitte versuche es erneut.",
+    },
+  },
+  newSubject: {
+    metaTitle: "Neues Fach anlegen",
+    back: "Zurück zur Fächerliste",
+    eyebrow: "Neues Fach",
+    title: "Fach hinzufügen",
+    intro:
+      "Lege das Fach mit deutschem und vietnamesischem Namen an. Danach lädst du direkt die ersten Materialien hoch.",
+    nameDeLabel: "Name (Deutsch)",
+    nameDeHint: "Steht als Haupttitel auf der Fachseite.",
+    nameDePlaceholder: "z. B. Statistik I",
+    nameViLabel: "Name (Vietnamesisch)",
+    nameViHint: "Wird angezeigt, wenn die Sprache auf Vietnamesisch steht.",
+    nameViPlaceholder: "z. B. Thống kê I",
+    descriptionLabel: "Beschreibung",
+    descriptionHint: "Ein bis zwei Sätze dazu, worum es in dem Fach geht.",
+    descriptionPlaceholder:
+      "z. B. Deskriptive Statistik, Wahrscheinlichkeiten und Hypothesentests.",
+    optional: "optional",
+    submit: "Fach anlegen",
+    submitting: "Fach wird angelegt …",
+    cancel: "Abbrechen",
+    errors: {
+      nameDe: "Bitte gib den deutschen Namen des Fachs ein.",
+      nameVi: "Bitte gib den vietnamesischen Namen des Fachs ein.",
+      tooLong:
+        "Der Text ist zu lang: höchstens 120 Zeichen pro Name und 600 Zeichen für die Beschreibung.",
+      network:
+        "Der Server ist nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
+      save: "Das Fach konnte nicht gespeichert werden. Bitte versuche es erneut.",
     },
   },
   upload: {
@@ -761,6 +820,37 @@ const vi: Dictionary = {
       "invalid-body": "Yêu cầu không hợp lệ.",
       "invalid-json": "Yêu cầu không hợp lệ.",
       unknown: "Không tạo được đề. Vui lòng thử lại.",
+    },
+  },
+  newSubject: {
+    metaTitle: "Tạo môn học mới",
+    back: "Quay lại danh sách môn học",
+    eyebrow: "Môn học mới",
+    title: "Thêm môn học",
+    intro:
+      "Điền tên tiếng Đức và tiếng Việt cho môn học. Sau đó bạn có thể tải tài liệu đầu tiên lên ngay.",
+    nameDeLabel: "Tên tiếng Đức",
+    nameDeHint: "Được dùng làm tiêu đề chính trên trang môn học.",
+    nameDePlaceholder: "ví dụ: Statistik I",
+    nameViLabel: "Tên tiếng Việt",
+    nameViHint: "Hiển thị khi giao diện chuyển sang tiếng Việt.",
+    nameViPlaceholder: "ví dụ: Thống kê I",
+    descriptionLabel: "Mô tả",
+    descriptionHint: "Một hai câu tóm tắt nội dung của môn học.",
+    descriptionPlaceholder:
+      "ví dụ: Thống kê mô tả, xác suất và kiểm định giả thuyết.",
+    optional: "không bắt buộc",
+    submit: "Tạo môn học",
+    submitting: "Đang tạo môn học...",
+    cancel: "Huỷ",
+    errors: {
+      nameDe: "Vui lòng nhập tên tiếng Đức của môn học.",
+      nameVi: "Vui lòng nhập tên tiếng Việt của môn học.",
+      tooLong:
+        "Nội dung quá dài: tối đa 120 ký tự cho mỗi tên và 600 ký tự cho phần mô tả.",
+      network:
+        "Không kết nối được tới máy chủ. Vui lòng kiểm tra kết nối và thử lại.",
+      save: "Không lưu được môn học. Vui lòng thử lại.",
     },
   },
   upload: {
