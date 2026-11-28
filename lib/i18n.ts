@@ -527,14 +527,14 @@ const de: Dictionary = {
     dropTitle: "Dateien hierher ziehen",
     dropSubtitle: "oder wähle eine oder mehrere Dateien von deinem Computer",
     chooseFile: "Dateien auswählen",
-    hint: "Unterstützt PDF, Word, Excel, Text – maximal 20 MB pro Datei, bis zu 10 Dateien",
+    hint: "Unterstützt PDF, Word, Excel, Text – maximal 70 MB pro Datei, bis zu 10 Dateien",
     remove: "Entfernen",
     selectedFilesLabel: "Ausgewählte Dateien",
     clearAll: "Alle entfernen",
     errors: {
       unsupported:
         "Unterstützte Formate: PDF, Word (.docx), Excel (.xlsx), Text (.txt) und CSV (.csv).",
-      tooLarge: "Die Datei darf höchstens 20 MB groß sein.",
+      tooLarge: "Die Datei darf höchstens 70 MB groß sein.",
       tooMany: "Es lassen sich höchstens 10 Dateien gleichzeitig verarbeiten.",
       noFile: "Bitte wähle zuerst mindestens eine Datei aus.",
       network:
@@ -866,14 +866,14 @@ const vi: Dictionary = {
     dropTitle: "Kéo thả một hoặc nhiều tệp vào đây",
     dropSubtitle: "hoặc chọn nhiều tệp từ máy của bạn",
     chooseFile: "Chọn tệp",
-    hint: "Hỗ trợ PDF, Word, Excel, Text, tối đa 20 MB mỗi tệp, tối đa 10 tệp",
+    hint: "Hỗ trợ PDF, Word, Excel, Text, tối đa 70 MB mỗi tệp, tối đa 10 tệp",
     remove: "Xóa",
     selectedFilesLabel: "Tệp đã chọn",
     clearAll: "Xóa tất cả",
     errors: {
       unsupported:
         "Chỉ hỗ trợ PDF, Word (.docx), Excel (.xlsx), Text (.txt) và CSV (.csv).",
-      tooLarge: "Tệp không được vượt quá 20 MB.",
+      tooLarge: "Tệp không được vượt quá 70 MB.",
       tooMany: "Chỉ có thể xử lý tối đa 10 tệp trong một lần.",
       noFile: "Vui lòng chọn ít nhất một tệp trước khi tải lên.",
       network:

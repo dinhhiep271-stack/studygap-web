@@ -19,8 +19,12 @@ import { DOCUMENT_ACCEPT, isSupportedDocument } from "@/lib/file-formats";
 import { FileTypeBadge } from "@/components/file-type-badge";
 import { OutcomeCard } from "./outcome-card";
 
-/** Must match MAX_UPLOAD_BYTES in the FastAPI service (main.py). */
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+/**
+ * Must match MAX_UPLOAD_BYTES in the FastAPI service (main.py) – raising it here
+ * alone only moves the rejection to the API: files above the service limit fail
+ * after the upload finished.
+ */
+const MAX_FILE_SIZE = 70 * 1024 * 1024;
 /** Must match MAX_BATCH_FILES in the FastAPI service (main.py). */
 const MAX_FILES = 10;
 
