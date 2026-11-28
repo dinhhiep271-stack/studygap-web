@@ -92,7 +92,7 @@ export async function explainConcept({
     );
   }
 
-  const explanation = parseConceptExplanation(payload, concept, lang);
+  const explanation = parseConceptExplanation(payload, concept, lang, category);
 
   if (!explanation) {
     throw new ConceptExplanationError("empty");

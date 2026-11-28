@@ -26,6 +26,7 @@ import { localeNames, type Locale } from "@/lib/locales";
 /**
  * Colour palette for the sections. The AI picks the section keys per subject
  * category, so the palette is rotated by position instead of keyed by name.
+ * Ten entries keep every section of the medical contract visually distinct.
  */
 const sectionPalette = [
   {
@@ -47,6 +48,36 @@ const sectionPalette = [
     card: "border-amber-100 bg-amber-50/60",
     badge: "bg-amber-500 text-white",
     title: "text-amber-900",
+  },
+  {
+    card: "border-rose-100 bg-rose-50/60",
+    badge: "bg-rose-600 text-white",
+    title: "text-rose-900",
+  },
+  {
+    card: "border-teal-100 bg-teal-50/60",
+    badge: "bg-teal-600 text-white",
+    title: "text-teal-900",
+  },
+  {
+    card: "border-indigo-100 bg-indigo-50/60",
+    badge: "bg-indigo-600 text-white",
+    title: "text-indigo-900",
+  },
+  {
+    card: "border-cyan-100 bg-cyan-50/60",
+    badge: "bg-cyan-600 text-white",
+    title: "text-cyan-900",
+  },
+  {
+    card: "border-lime-100 bg-lime-50/60",
+    badge: "bg-lime-600 text-white",
+    title: "text-lime-900",
+  },
+  {
+    card: "border-fuchsia-100 bg-fuchsia-50/60",
+    badge: "bg-fuchsia-600 text-white",
+    title: "text-fuchsia-900",
   },
 ] as const;
 

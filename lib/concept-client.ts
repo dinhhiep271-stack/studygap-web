@@ -74,6 +74,9 @@ export async function fetchConceptExplanation(
     payload?.explanation,
     concept,
     lang,
+    // The route falls back to the general structure, so mirror that here and
+    // keep the dialog's section list in sync with the answer.
+    category ?? "general",
   );
 
   if (!explanation) {

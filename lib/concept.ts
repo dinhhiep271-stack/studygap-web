@@ -11,9 +11,9 @@ import { defaultLocale, type Locale } from "@/lib/locales";
  * medical subjects answer with `definition`, `symptome`, `diagnostik`,
  * `differentialdiagnosen`, `therapie`, `medikamente`, `prophylaxe`,
  * `pflegeplanung`, `komplikationen` and `prognose`. The dialog therefore renders
- * every key it receives
- * (`conceptSectionTitle` maps it to a bilingual caption) instead of hardcoding
- * four sections.
+ * every key it receives (`conceptSectionTitle` maps it to a bilingual caption)
+ * instead of hardcoding four sections, and `conceptCategorySections` completes
+ * the medical contract so all ten sections appear even when the model omits one.
  */
 
 /** Content structure the AI service is asked for (`category` request field). */
@@ -31,23 +31,63 @@ export function isConceptCategory(
 }
 
 /**
- * Subject-name keywords that mark a medical subject. The comparison
- * lower-cases the name and expands German umlauts, so "Medizin",
- * "medizinische" and "MEDIZIN" all match.
+ * Section keys the AI contract defines per category, in response order. Mirrors
+ * `CONCEPT_CATEGORY_SECTIONS` in the studygap-ai service; `medical` is the
+ * ten-step clinical workflow the dialog has to show in full.
+ */
+export const conceptCategorySections: Record<
+  ConceptCategory,
+  readonly string[]
+> = {
+  general: ["definition", "erklaerung", "zusammenhang", "kritik"],
+  medical: [
+    "definition",
+    "symptome",
+    "diagnostik",
+    "differentialdiagnosen",
+    "therapie",
+    "medikamente",
+    "prophylaxe",
+    "pflegeplanung",
+    "komplikationen",
+    "prognose",
+  ],
+};
+
+/**
+ * Subject-name keywords that mark a medical subject. The comparison folds
+ * case, German umlauts and Vietnamese diacritics, so "Medizin",
+ * "MEDIZIN", "Y khoa" and "Điều dưỡng" all match the ASCII keywords below.
  */
 export const medicalSubjectKeywords = [
+  // German subject names.
   "medizin",
   "pflege",
   "krankheit",
+  // English subject names.
+  "medical",
+  "medicine",
+  "nursing",
+  // Vietnamese subject names ("y khoa", "điều dưỡng" folded to ASCII).
+  "y khoa",
+  "dieu duong",
 ] as const;
 
+/**
+ * Lower-cases a value and folds it to ASCII. German umlauts are spelled out
+ * first (`ä` → `ae`, so `Erklärung` keeps resolving to `erklaerung`), then
+ * remaining diacritics are stripped (`điều dưỡng` → `dieu duong`).
+ */
 function foldSectionKey(value: string) {
   return value
     .toLowerCase()
     .replace(/ä/g, "ae")
     .replace(/ö/g, "oe")
     .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss");
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
 }
 
 /**
@@ -85,6 +125,11 @@ export const conceptSectionTitles: Record<string, BilingualText> = {
   symptome: { de: "Symptome", vi: "Triệu chứng" },
   diagnostik: { de: "Diagnostik", vi: "Chẩn đoán" },
   differentialdiagnosen: {
+    de: "Differentialdiagnosen",
+    vi: "Chẩn đoán phân biệt",
+  },
+  // German spelling variant the model may answer with.
+  differenzialdiagnosen: {
     de: "Differentialdiagnosen",
     vi: "Chẩn đoán phân biệt",
   },
@@ -262,7 +307,9 @@ function hasLocalizedText(value: BilingualText) {
 /**
  * Keys that describe the payload itself instead of a section. Every other key
  * is treated as a section, which is how the category-specific JSON structure
- * (`symptome`, `diagnose`, ...) is picked up without a whitelist.
+ * (`symptome`, `diagnose`, ...) is picked up without a whitelist. `lang`,
+ * `model`, `usage` and the `context_*` counters are part of the
+ * `/explain-concept` response too, so they must never become a card.
  */
 const conceptMetadataKeys = new Set([
   "success",
@@ -270,6 +317,12 @@ const conceptMetadataKeys = new Set([
   "category",
   "detail",
   "error",
+  "lang",
+  "model",
+  "usage",
+  "context_characters",
+  "context_truncated",
+  "sections",
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -286,25 +339,39 @@ function sectionSource(record: Record<string, unknown>) {
 
 /**
  * Reads an `/explain-concept` payload defensively. Every section the model
- * returned is kept in response order with its `{ de, vi }` texts; empty
- * sections are dropped. Returns `null` when no section is usable, which the AI
- * service treats as an empty answer as well.
+ * returned is kept with its `{ de, vi }` texts and payload metadata is skipped.
+ *
+ * When `category` is given, the result always contains the full contract of
+ * that category in contract order (`conceptCategorySections`): a medical answer
+ * therefore shows all ten clinical sections, an omitted one simply stays empty
+ * and the dialog renders its "no content" note. Keys the contract does not know
+ * are appended in response order, so a newer service still reaches the modal
+ * without a frontend change. Returns `null` when no section is usable, which
+ * the AI service treats as an empty answer as well.
  */
 export function parseConceptExplanation(
   value: unknown,
   fallbackConcept = "",
   fallbackLocale: Locale = defaultLocale,
+  category?: ConceptCategory,
 ): ConceptExplanation | null {
   if (!isRecord(value)) {
     return null;
   }
 
-  const sections: ConceptSection[] = [];
+  const parsed: ConceptSection[] = [];
+  const seen = new Set<string>();
 
   for (const [key, rawSection] of Object.entries(sectionSource(value))) {
     const name = key.trim();
 
     if (!name || conceptMetadataKeys.has(name.toLowerCase())) {
+      continue;
+    }
+
+    const normalized = normalizeSectionKey(name);
+
+    if (seen.has(normalized)) {
       continue;
     }
 
@@ -314,11 +381,39 @@ export function parseConceptExplanation(
       continue;
     }
 
-    sections.push({ key: name, de: text.de, vi: text.vi });
+    seen.add(normalized);
+    parsed.push({ key: name, de: text.de, vi: text.vi });
   }
 
-  if (sections.length === 0) {
+  if (parsed.length === 0) {
     return null;
+  }
+
+  const sections: ConceptSection[] = [];
+  const used = new Set<string>();
+
+  // Complete the contract of the category first: every key in contract order,
+  // even one the model left out.
+  for (const key of category ? conceptCategorySections[category] : []) {
+    const normalized = normalizeSectionKey(key);
+    const match = parsed.find(
+      (section) => normalizeSectionKey(section.key) === normalized,
+    );
+
+    used.add(normalized);
+    sections.push(match ?? { key, de: "", vi: "" });
+  }
+
+  // Sections outside the contract keep their response order after the contract.
+  for (const section of parsed) {
+    const normalized = normalizeSectionKey(section.key);
+
+    if (used.has(normalized)) {
+      continue;
+    }
+
+    used.add(normalized);
+    sections.push(section);
   }
 
   return {
